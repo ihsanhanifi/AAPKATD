@@ -6,6 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEvents() {
+     document.addEventListener('click', (e) => {
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menuToggle');
+        if (window.innerWidth <= 767 && 
+            !sidebar.contains(e.target) && 
+            !menuToggle.contains(e.target) && 
+            sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+        }
+    });
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
     document.getElementById('agendaForm').addEventListener('submit', handleAgendaSubmit);
@@ -47,12 +57,12 @@ function showApp() {
     navigateTo('dashboard');
 }
 function navigateTo(page) {
-    document.querySelectorAll('.nav-link').forEach(l=>l.classList.toggle('active', l.dataset.page===page));
-    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===`page-${page}`));
-    const t={dashboard:'Dashboard', agenda:'Manajemen Agenda', calendar:'Kalender', importExport:'Import/Export', users:'Manajemen User', settings:'Pengaturan'};
-    document.getElementById('pageTitle').textContent=t[page]||'Dashboard';
-    if(page==='dashboard')loadDashboard(); if(page==='agenda')loadAgenda(); if(page==='calendar')renderCalendar(); if(page==='users')loadUsers(); if(page==='settings')loadSettings();
-    document.getElementById('sidebar')?.classList.remove('active');
+    // Close sidebar on mobile after navigation
+    if (window.innerWidth <= 767) {
+        document.getElementById('sidebar').classList.remove('active');
+    }
+    
+    // ... rest of existing code ...
 }
 
 // ============================================
