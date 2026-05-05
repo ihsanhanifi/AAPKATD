@@ -6,23 +6,21 @@
     <meta name="theme-color" content="#1a5632">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Agenda Pimpinan - Kemenag Kab. Tanah Datar</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- LOGIN PAGE -->
+    <!-- LOGIN -->
     <div id="loginPage" class="login-container">
         <div class="login-box">
             <div class="login-header">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png" alt="Logo" class="logo" onerror="this.style.display='none'">
-                <h2>Agenda Pimpinan</h2>
-                <p>Kementerian Agama Kabupaten Tanah Datar</p>
+                <h2>Agenda Pimpinan</h2><p>Kementerian Agama Kabupaten Tanah Datar</p>
             </div>
             <form id="loginForm">
-                <div class="form-group"><label><i class="fas fa-user"></i> Username</label><input type="text" id="loginUsername" placeholder="Masukkan username" required autocomplete="username"></div>
-                <div class="form-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="loginPassword" placeholder="Masukkan password" required autocomplete="current-password"></div>
+                <div class="form-group"><label><i class="fas fa-user"></i> Username</label><input type="text" id="loginUsername" required autocomplete="username"></div>
+                <div class="form-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="loginPassword" required autocomplete="current-password"></div>
                 <button type="submit" class="btn btn-primary btn-block" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Masuk</button>
                 <div id="loginError" class="error-msg"></div>
             </form>
@@ -52,7 +50,7 @@
 
         <main class="main-content">
             <header class="topbar">
-                <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+                <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
                 <h2 id="pageTitle">Dashboard</h2>
                 <div class="topbar-right"><span id="currentDateTime"></span></div>
             </header>
@@ -90,7 +88,7 @@
                             <button class="btn btn-success" onclick="openAgendaModal()"><i class="fas fa-plus"></i> Tambah Agenda</button>
                         </div>
                     </div>
-                    <div class="card"><div class="card-body"><div class="table-responsive"><table class="table" id="agendaTable"><thead><tr><th><input type="checkbox" id="selectAllAgenda" title="Pilih Semua"></th><th>No</th><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>Dibuat Oleh</th><th>Status</th><th>Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
+                    <div class="card"><div class="card-body"><div class="table-responsive"><table class="table" id="agendaTable"><thead><tr><th><input type="checkbox" id="selectAllAgenda"></th><th>No</th><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>Dibuat Oleh</th><th>Status</th><th>Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
                 </div>
 
                 <!-- CALENDAR -->
@@ -107,33 +105,13 @@
                     </div>
                 </div>
 
-                <!-- USERS -->
+                <!-- USERS (COMPACT TABLE) -->
                 <div id="page-users" class="page admin-only">
                     <div class="page-header-compact">
-                        <div>
-                            <h3><i class="fas fa-users"></i> Manajemen User</h3>
-                            <small class="text-muted">Kelola akses pengguna sistem</small>
-                        </div>
+                        <div><h3><i class="fas fa-users"></i> Manajemen User</h3><small class="text-muted">Kelola akses & sesi pengguna</small></div>
                         <button class="btn btn-success btn-sm" onclick="openUserModal()"><i class="fas fa-user-plus"></i> Tambah User</button>
                     </div>
-                    <div class="card compact-card">
-                        <div class="card-body" style="padding: 0;">
-                            <div class="table-responsive">
-                                <table class="table table-compact" id="usersTableCompact">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 50px;">No</th>
-                                            <th style="width: 250px;">User</th>
-                                            <th>Jabatan</th>
-                                            <th style="width: 100px;">Role</th>
-                                            <th style="width: 150px;">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="card compact-card"><div class="card-body" style="padding:0;"><div class="table-responsive"><table class="table table-compact" id="usersTableCompact"><thead><tr><th style="width:50px;">No</th><th>User</th><th>Jabatan</th><th>Role</th><th>Sesi</th><th style="width:200px;">Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
                 </div>
 
                 <!-- SETTINGS -->
