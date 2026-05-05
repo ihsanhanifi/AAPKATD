@@ -75,16 +75,31 @@ async function handleAgendaSubmit(e) {
 }
 
 function openWhatsApp(msg) { let ph=localStorage.getItem('waNumber')||''; ph=ph.replace(/\D/g,''); if(!ph.startsWith('62'))ph='62'+ph.replace(/^0/,''); if(ph.length<10) return showToast('Atur nomor WA di Pengaturan dulu', 'warning'); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`,'_blank'); }
+
+// ✅ WHATSAPP FORMAT LENGKAP DENGAN JUDUL, LOKASI, KEGIATAN
 window.sendWhatsAppDirect = function(a) {
-    let msg=`🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n━━━━━━━━━━━━━━\n📋 *AGENDA KEGIATAN*\n\n📅 *Tanggal:* ${formatDate(a.tanggal)}\n⏰ *Waktu:* ${a.waktu_mulai||'-'} s/d ${a.waktu_selesai||'-'}\n📍 *Tempat:* ${a.tempat||'-'}\n\n📝 *Kegiatan:* ${a.kegiatan||'-'}\n`;
-    if(a.penanggung_jawab?.trim())msg+=`👤 *Penanggung Jawab:* ${a.penanggung_jawab}\n`;
-    if(a.pakaian?.trim())msg+=`👔 *Pakaian:* ${a.pakaian}\n`;
-    if(a.petugas?.trim())msg+=`👥 *Petugas:* ${a.petugas}\n`;
-    if(a.pejabat?.trim())msg+=`🏅 *Pejabat:* ${a.pejabat}\n`;
-    if(a.keterangan?.trim())msg+=`\n📌 *Keterangan:* ${a.keterangan}\n`;
-    msg+=`━━━━━━━━━━━━━━\n👤 *Input oleh:* ${a.dibuat_oleh||currentUser.username}\n_Mohon kehadiran tepat waktu._`;
+    let msg = `🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `📋 *AGENDA KEGIATAN*\n\n`;
+    msg += `📅 *Tanggal:* ${formatDate(a.tanggal)}\n`;
+    msg += `⏰ *Waktu:* ${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}\n`;
+    msg += `📍 *Tempat/Lokasi:* ${a.tempat||'-'}\n\n`;
+    msg += `📝 *Nama Kegiatan:*\n*${a.kegiatan||'-'}*\n\n`;
+    
+    if(a.penanggung_jawab?.trim()) msg += `👤 *Penanggung Jawab:* ${a.penanggung_jawab}\n`;
+    if(a.pakaian?.trim()) msg += `👔 *Pakaian:* ${a.pakaian}\n`;
+    if(a.petugas?.trim()) msg += `👥 *Petugas:* ${a.petugas}\n`;
+    if(a.pejabat?.trim()) msg += `🏅 *Pejabat:* ${a.pejabat}\n`;
+    if(a.keterangan?.trim()) msg += `\n📌 *Keterangan:* ${a.keterangan}\n`;
+    
+    msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `👤 *Input oleh:* ${a.dibuat_oleh||currentUser.username}\n`;
+    msg += `_Mohon kehadiran tepat waktu._\n`;
+    msg += `_Terima kasih._`;
+    
     openWhatsApp(msg);
 }
+
 window.sendWhatsAppById = function(id) { const a=allAgenda.find(x=>String(x.id)===String(id)); if(!a){showToast('Memuat data terbaru...','info');loadAgenda().then(()=>{const r=allAgenda.find(x=>String(x.id)===String(id));r?sendWhatsAppDirect(r):showToast('Data tidak ditemukan.','error');});return;} sendWhatsAppDirect(a); }
 window.sendWhatsApp = window.sendWhatsAppDirect;
 
