@@ -1,6 +1,7 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbxsMinDFpWXajV5PEJY-BGbF6z0DywgzFr2Jws7f_Co1W-5SqMhkFHGXXksqTcIt9IQOw/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
-let inactivityTimer; const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 menit
+let inactivityTimer, sessionCheckTimer;
+const SESSION_TIMEOUT = 10 * 60 * 1000;
 
 document.addEventListener('DOMContentLoaded', () => { checkLogin(); setupEvents(); updateClock(); setInterval(updateClock, 1000); });
 
@@ -32,6 +33,8 @@ async function api(action, payload={}) {
 function setupAutoLogout() {
     ['click','keydown','mousemove','scroll','touchstart'].forEach(evt => document.addEventListener(evt, resetActivityTimer, true));
     resetActivityTimer();
+    if(sessionCheckTimer) clearInterval(sessionCheckTimer);
+    sessionCheckTimer = setInterval(checkMySession, 20000); // Cek paksa logout setiap 20 detik
 }
 function resetActivityTimer() { clearTimeout(inactivityTimer); inactivityTimer = setTimeout(() => { if(currentUser){ showToast('Sesi berakhir karena tidak aktif 10 menit.', 'warning'); handleLogout(); } }, SESSION_TIMEOUT); }
 
@@ -42,13 +45,28 @@ async function handleLogin(e) {
     btn.disabled=false; btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Masuk';
     if(res.status==='success'){currentUser=res.data; localStorage.setItem('agendaUser',JSON.stringify(currentUser)); showApp();} else {errDiv.textContent=res.message;}
 }
-function handleLogout() { clearTimeout(inactivityTimer); if(confirm('Yakin keluar?') || !currentUser){ localStorage.removeItem('agendaUser'); currentUser=null; document.getElementById('loginPage').style.display='flex'; document.getElementById('appPage').style.display='none'; document.getElementById('loginForm')?.reset(); } }
+function handleLogout() { 
+    clearTimeout(inactivityTimer); if(sessionCheckTimer) clearInterval(sessionCheckTimer);
+    localStorage.removeItem('agendaUser'); currentUser=null; 
+    document.getElementById('loginPage').style.display='flex'; document.getElementById('appPage').style.display='none'; 
+    document.getElementById('loginForm')?.reset(); 
+}
 function showApp() {
     document.getElementById('loginPage').style.display='none'; document.getElementById('appPage').style.display='flex';
     document.getElementById('userAvatar').textContent=currentUser.nama_lengkap.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
     document.getElementById('userName').textContent=currentUser.nama_lengkap; document.getElementById('userRole').textContent=currentUser.jabatan;
     document.querySelectorAll('.admin-only').forEach(el=>el.style.display=currentUser.role==='admin'?'flex':'none');
     setupAutoLogout(); window.navigateTo('dashboard');
+}
+
+// ✅ CEK PAKSA LOGOUT DARI ADMIN
+async function checkMySession() {
+    if(!currentUser) return;
+    const res = await api('checkMySession', {username: currentUser.username});
+    if(res.status==='success' && res.data?.force_logout) {
+        showToast('⚠️ Sesi Anda telah diakhiri oleh Admin.', 'warning');
+        setTimeout(() => handleLogout(), 1500);
+    }
 }
 
 window.navigateTo = function(page) {
@@ -68,8 +86,25 @@ async function loadAgenda() {
     const res = await api('getAgenda',{username:currentUser.username,role:currentUser.role,startDate:document.getElementById('filterStartDate')?.value||'',endDate:document.getElementById('filterEndDate')?.value||'',search:document.getElementById('filterSearch')?.value||''});
     if(res.status==='success'){ allAgenda=res.data||[]; normalizeStatus(); renderAgendaTable(); loadDashboard(); } return res;
 }
+
+// ✅ PERBAIKAN PAYLOAD AGENDA (TIDAK HILANG LAGI)
 async function handleAgendaSubmit(e) {
-    e.preventDefault(); const id=document.getElementById('agendaId').value; const p={tanggal:document.getElementById('agendaTanggal').value,waktu_mulai:document.getElementById('agendaWaktuMulai').value,waktu_selesai:document.getElementById('agendaWaktuSelesai').value,kegiatan:document.getElementById('agendaKegiatan').value,tempat:document.getElementById('agendaTempat').value,keterangan:document.getElementById('agendaKeterangan').value,dibuat_oleh:currentUser.username}; const wantWA=document.getElementById('sendWhatsApp')?.checked;
+    e.preventDefault(); 
+    const id=document.getElementById('agendaId').value; 
+    const p = {
+        tanggal: document.getElementById('agendaTanggal').value,
+        waktu_mulai: document.getElementById('agendaWaktuMulai').value,
+        waktu_selesai: document.getElementById('agendaWaktuSelesai').value,
+        kegiatan: document.getElementById('agendaKegiatan').value,
+        tempat: document.getElementById('agendaTempat').value,
+        penanggung_jawab: document.getElementById('agendaPJ').value,
+        pakaian: document.getElementById('agendaPakaian').value,
+        petugas: document.getElementById('agendaPetugas').value,
+        pejabat: document.getElementById('agendaPejabat').value,
+        keterangan: document.getElementById('agendaKeterangan').value,
+        dibuat_oleh: currentUser.username
+    }; 
+    const wantWA=document.getElementById('sendWhatsApp')?.checked;
     let res; if(id){p.id=id;res=await api('updateAgenda',p);} else {res=await api('addAgenda',p);}
     if(res.status==='success'){showToast(res.message,'success');closeAgendaModal();if(!id&&wantWA&&res.data?.id)sendWhatsAppDirect({...p,id:res.data.id});await loadAgenda();}
 }
@@ -133,59 +168,50 @@ function closeAgendaModal(){document.getElementById('agendaModal').classList.rem
 window.editAgenda=function(id){openAgendaModal(id);};
 window.deleteAgenda=async function(id){if(!confirm('Hapus agenda ini?'))return;const res=await api('deleteAgenda',{id});if(res.status==='success'){showToast(res.message,'success');loadAgenda();}};
 
-// ✅ USER MANAGEMENT - COMPACT TABLE RENDER
-async function loadUsers(){
-    const res = await api('getUsers');
-    if(res.status === 'success') renderUsersTableCompact(res.data);
-}
-
+// ✅ USER MANAGEMENT + FORCE LOGOUT
+async function loadUsers(){ const res = await api('getUsers'); if(res.status === 'success') renderUsersTableCompact(res.data); }
 function renderUsersTableCompact(users){
-    const tbody = document.querySelector('#usersTableCompact tbody');
-    if(!tbody) return;
-    tbody.innerHTML = '';
-    
-    if(!users.length){
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 30px;"><i class="fas fa-users fa-2x mb-2"></i><br>Tidak ada user</td></tr>';
-        return;
-    }
+    const tbody = document.querySelector('#usersTableCompact tbody'); if(!tbody) return; tbody.innerHTML = '';
+    if(!users.length){ tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 30px;"><i class="fas fa-users fa-2x mb-2"></i><br>Tidak ada user</td></tr>'; return; }
     
     users.forEach((u, index) => {
         const rc = (u.role || 'user').toString().trim().toLowerCase();
         const roleClass = rc === 'admin' ? 'role-admin' : 'role-user';
         const roleLabel = rc === 'admin' ? 'Admin' : 'User';
         const roleIcon = rc === 'admin' ? 'fas fa-shield-alt' : 'fas fa-user';
+        const isForced = u.force_logout;
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${index + 1}</td>
-            <td>
-                <div class="user-info-compact">
-                    <div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div>
-                    <div class="user-details-compact">
-                        <div class="user-name-compact">${u.nama_lengkap || '-'}</div>
-                        <div class="user-username-compact">@${u.username}</div>
-                    </div>
-                </div>
-            </td>
+            <td><div class="user-info-compact"><div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div><div class="user-details-compact"><div class="user-name-compact">${u.nama_lengkap || '-'}</div><div class="user-username-compact">@${u.username}</div></div></div></td>
             <td>${u.jabatan || '-'}</td>
-            <td>
-                <span class="badge-compact ${roleClass}">
-                    <i class="${roleIcon}"></i> ${roleLabel}
-                </span>
-            </td>
+            <td><span class="badge-compact ${roleClass}"><i class="${roleIcon}"></i> ${roleLabel}</span></td>
+            <td><span class="badge ${isForced ? 'badge-danger' : 'badge-success'}">${isForced ? '🔴 Nonaktif' : '🟢 Aktif'}</span></td>
             <td>
                 <div class="action-btns-compact">
-                    <button class="btn btn-warning btn-sm" onclick="editUser('${u.username}')" title="Edit">
-                        <i class="fas fa-edit"></i>
+                    ${rc !== 'admin' ? `
+                    <button class="btn btn-danger btn-sm" onclick="forceLogoutUser('${u.username}')" title="Paksa Logout">
+                        <i class="fas fa-power-off"></i> Logout
                     </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')" ${rc === 'admin' ? 'disabled' : ''} title="Hapus">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <button class="btn btn-success btn-sm" onclick="allowLoginUser('${u.username}')" title="Izinkan Login">
+                        <i class="fas fa-check"></i> Izinkan
+                    </button>` : `<span class="text-muted" style="font-size:0.8rem;">Admin Utama</span>`}
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+window.forceLogoutUser = async function(username) {
+    if(!confirm(`Paksa logout user ${username}? User akan keluar otomatis dalam 20 detik.`)) return;
+    const res = await api('forceLogoutUser', {username});
+    if(res.status==='success'){ showToast(res.message, 'success'); loadUsers(); }
+}
+window.allowLoginUser = async function(username) {
+    const res = await api('allowLoginUser', {username});
+    if(res.status==='success'){ showToast(res.message, 'success'); loadUsers(); }
 }
 
 function openUserModal(username=null){document.getElementById('userModal').classList.add('active');document.getElementById('userModalTitle').textContent=username?'Edit User':'Tambah User';document.getElementById('userForm').reset();document.getElementById('userOldUsername').value='';document.getElementById('userPassword').placeholder='Masukkan password';document.getElementById('userPassword').required=true;if(username){const rows=document.querySelectorAll('#usersTableCompact tbody tr'); for(let row of rows){if(row.querySelector('.user-username-compact')?.textContent.includes(username)){document.getElementById('userUsername').value=username;document.getElementById('userOldUsername').value=username;document.getElementById('userNama').value=row.querySelector('.user-name-compact').textContent;document.getElementById('userJabatan').value=row.querySelector('td:nth-child(3)').textContent;document.getElementById('userRole').value=(row.querySelector('.badge-compact').textContent || '').trim().toLowerCase().includes('admin')?'admin':'user';document.getElementById('userPassword').required=false;document.getElementById('userPassword').placeholder='Kosongkan jika tidak diubah';break;}}}}
@@ -214,4 +240,4 @@ function updateClock(){const n=new Date();const o={weekday:'long',year:'numeric'
 function formatDate(ds){if(!ds)return'-';if(ds instanceof Date){const d=ds.getDate(),m=ds.getMonth(),y=ds.getFullYear();const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${d} ${mo[m]} ${y}`;}const p=String(ds).trim().split(/[-T]/);if(p.length>=3){const[y,m,d]=p;const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${parseInt(d,10)} ${mo[parseInt(m,10)-1]} ${y}`;}return String(ds);}
 
 // GLOBAL EXPOSURE
-window.navigateTo=window.navigateTo||navigateTo;window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect;window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById;window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect;window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda;window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas;window.editAgenda=window.editAgenda||editAgenda;window.deleteAgenda=window.deleteAgenda||deleteAgenda;window.openAgendaModal=window.openAgendaModal||openAgendaModal;window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal;window.loadAgenda=window.loadAgenda||loadAgenda;window.changeMonth=window.changeMonth||changeMonth;window.openUserModal=window.openUserModal||openUserModal;window.closeUserModal=window.closeUserModal||closeUserModal;window.editUser=window.editUser||editUser;window.deleteUser=window.deleteUser||deleteUser;window.confirmImport=window.confirmImport||confirmImport;window.exportAgenda=window.exportAgenda||exportAgenda;window.saveWaNumber=window.saveWaNumber||saveWaNumber;
+window.navigateTo=window.navigateTo||navigateTo;window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect;window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById;window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect;window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda;window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas;window.editAgenda=window.editAgenda||editAgenda;window.deleteAgenda=window.deleteAgenda||deleteAgenda;window.openAgendaModal=window.openAgendaModal||openAgendaModal;window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal;window.loadAgenda=window.loadAgenda||loadAgenda;window.changeMonth=window.changeMonth||changeMonth;window.openUserModal=window.openUserModal||openUserModal;window.closeUserModal=window.closeUserModal||closeUserModal;window.editUser=window.editUser||editUser;window.deleteUser=window.deleteUser||deleteUser;window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser;window.allowLoginUser=window.allowLoginUser||allowLoginUser;window.confirmImport=window.confirmImport||confirmImport;window.exportAgenda=window.exportAgenda||exportAgenda;window.saveWaNumber=window.saveWaNumber||saveWaNumber;
