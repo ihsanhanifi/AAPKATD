@@ -23,17 +23,9 @@
                 <p>Kementerian Agama Kabupaten Tanah Datar</p>
             </div>
             <form id="loginForm">
-                <div class="form-group">
-                    <label><i class="fas fa-user"></i> Username</label>
-                    <input type="text" id="loginUsername" placeholder="Masukkan username" required autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label><i class="fas fa-lock"></i> Password</label>
-                    <input type="password" id="loginPassword" placeholder="Masukkan password" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
-                    <i class="fas fa-sign-in-alt"></i> Masuk
-                </button>
+                <div class="form-group"><label><i class="fas fa-user"></i> Username</label><input type="text" id="loginUsername" placeholder="Masukkan username" required autocomplete="username"></div>
+                <div class="form-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="loginPassword" placeholder="Masukkan password" required autocomplete="current-password"></div>
+                <button type="submit" class="btn btn-primary btn-block" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Masuk</button>
                 <div id="loginError" class="error-msg"></div>
             </form>
         </div>
@@ -41,13 +33,10 @@
 
     <!-- MAIN APP -->
     <div id="appPage" class="app-container" style="display:none;">
-        <!-- SIDEBAR -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png" 
-                     alt="Logo" class="logo-small" onerror="this.style.display='none'">
-                <h3>Agenda Pimpinan</h3>
-                <small>Kemenag Kab. Tanah Datar</small>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png" alt="Logo" class="logo-small" onerror="this.style.display='none'">
+                <h3>Agenda Pimpinan</h3><small>Kemenag Kab. Tanah Datar</small>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
@@ -58,18 +47,11 @@
                 <a href="#" class="nav-link" data-page="settings"><i class="fas fa-cog"></i> Pengaturan</a>
             </nav>
             <div class="sidebar-footer">
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar"></div>
-                    <div>
-                        <div class="user-name" id="userName"></div>
-                        <div class="user-role" id="userRole"></div>
-                    </div>
-                </div>
+                <div class="user-info"><div class="user-avatar" id="userAvatar"></div><div><div class="user-name" id="userName"></div><div class="user-role" id="userRole"></div></div></div>
                 <button class="btn btn-danger btn-sm btn-block" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Keluar</button>
             </div>
         </aside>
 
-        <!-- MAIN CONTENT -->
         <main class="main-content">
             <header class="topbar">
                 <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
@@ -81,21 +63,20 @@
                 <!-- DASHBOARD -->
                 <div id="page-dashboard" class="page active">
                     <div class="stats-grid">
-                        <div class="stat-card"><div class="stat-icon bg-primary"><i class="fas fa-calendar-check"></i></div><div class="stat-info"><h3 id="statTotal">0</h3><p>Total Agenda</p></div></div>
+                        <div class="stat-card"><div class="stat-icon bg-primary"><i class="fas fa-calendar-check"></i></div><div class="stat-info"><h3 id="statTotal">0</h3><p>Total Agenda Aktif</p></div></div>
                         <div class="stat-card"><div class="stat-icon bg-success"><i class="fas fa-calendar-day"></i></div><div class="stat-info"><h3 id="statToday">0</h3><p>Agenda Hari Ini</p></div></div>
                         <div class="stat-card"><div class="stat-icon bg-warning"><i class="fas fa-calendar-week"></i></div><div class="stat-info"><h3 id="statWeek">0</h3><p>Agenda Minggu Ini</p></div></div>
                         <div class="stat-card"><div class="stat-icon bg-info"><i class="fas fa-users"></i></div><div class="stat-info"><h3 id="statMonth">0</h3><p>Agenda Bulan Ini</p></div></div>
                     </div>
                     <div class="card">
                         <div class="card-header">
-                            <h3><i class="fas fa-clock"></i> 5 Agenda Mendatang</h3>
-                            <button type="button" class="btn btn-sm btn-primary" id="btnViewAllAgenda"><i class="fas fa-arrow-right"></i> Lihat Semua</button>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table" id="upcomingTable"><thead><tr><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>PJ & Pakaian</th><th>Aksi</th></tr></thead><tbody></tbody></table>
+                            <h3><i class="fas fa-clock"></i> <span id="upcomingTitle">Agenda Mendatang</span></h3>
+                            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                <button type="button" class="btn btn-sm btn-success" id="btnSendDaily"><i class="fas fa-paper-plane"></i> Kirim Hari Ini</button>
+                                <button type="button" class="btn btn-sm btn-primary" id="btnViewAllAgenda"><i class="fas fa-arrow-right"></i> Lihat Semua</button>
                             </div>
                         </div>
+                        <div class="card-body"><div class="table-responsive"><table class="table" id="upcomingTable"><thead><tr><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>PJ & Pakaian</th><th>Aksi</th></tr></thead><tbody></tbody></table></div></div>
                     </div>
                 </div>
 
@@ -106,9 +87,12 @@
                             <input type="date" id="filterStartDate"><span>s/d</span><input type="date" id="filterEndDate"><input type="text" id="filterSearch" placeholder="Cari agenda...">
                             <button class="btn btn-primary" onclick="loadAgenda()"><i class="fas fa-search"></i> Filter</button>
                         </div>
-                        <button class="btn btn-success" onclick="openAgendaModal()"><i class="fas fa-plus"></i> Tambah Agenda</button>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button class="btn btn-success" onclick="sendSelectedAgendas()"><i class="fas fa-paper-plane"></i> Kirim Terpilih</button>
+                            <button class="btn btn-success" onclick="openAgendaModal()"><i class="fas fa-plus"></i> Tambah Agenda</button>
+                        </div>
                     </div>
-                    <div class="card"><div class="card-body"><div class="table-responsive"><table class="table" id="agendaTable"><thead><tr><th>No</th><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>Dibuat Oleh</th><th>Status</th><th>Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
+                    <div class="card"><div class="card-body"><div class="table-responsive"><table class="table" id="agendaTable"><thead><tr><th><input type="checkbox" id="selectAllAgenda" title="Pilih Semua"></th><th>No</th><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>Dibuat Oleh</th><th>Status</th><th>Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
                 </div>
 
                 <!-- CALENDAR -->
@@ -128,7 +112,7 @@
                 <!-- USERS -->
                 <div id="page-users" class="page admin-only">
                     <div class="page-actions"><div><h3 style="margin:0;color:var(--primary);"><i class="fas fa-users"></i> Manajemen User</h3><small class="text-muted">Kelola akses pengguna sistem</small></div><button class="btn btn-success" onclick="openUserModal()"><i class="fas fa-user-plus"></i> Tambah User</button></div>
-                    <div class="card"><div class="card-body"><div class="table-responsive"><table class="table" id="usersTable"><thead><tr><th style="min-width:220px;">User</th><th style="min-width:180px;">Jabatan</th><th style="min-width:100px;">Role</th><th style="min-width:120px;">Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
+                    <div class="card"><div class="card-body"><div id="usersContainer" class="users-grid"></div></div></div>
                 </div>
 
                 <!-- SETTINGS -->
@@ -139,10 +123,9 @@
         </main>
     </div>
 
-    <!-- AGENDA MODAL -->
+    <!-- MODALS -->
     <div class="modal" id="agendaModal"><div class="modal-content"><div class="modal-header"><h3 id="agendaModalTitle">Tambah Agenda</h3><button class="modal-close" onclick="closeAgendaModal()">&times;</button></div><form id="agendaForm"><input type="hidden" id="agendaId"><div class="form-group"><label>Tanggal *</label><input type="date" id="agendaTanggal" required></div><div class="form-row"><div class="form-group"><label>Waktu Mulai *</label><input type="time" id="agendaWaktuMulai" required></div><div class="form-group"><label>Waktu Selesai *</label><input type="time" id="agendaWaktuSelesai" required></div></div><div class="form-group"><label>Tempat *</label><input type="text" id="agendaTempat" required placeholder="Lokasi kegiatan"></div><div class="form-group"><label>Kegiatan *</label><input type="text" id="agendaKegiatan" required placeholder="Nama kegiatan"></div><hr style="margin:15px 0;border:0;border-top:1px solid var(--border);"><h4 style="font-size:0.85rem;color:var(--primary);margin:10px 0;">Detail Tambahan (Opsional)</h4><div class="form-row"><div class="form-group"><label>Penanggung Jawab</label><input type="text" id="agendaPJ" placeholder="Nama PIC"></div><div class="form-group"><label>Pakaian</label><input type="text" id="agendaPakaian" placeholder="Contoh: PDH / Batik"></div></div><div class="form-row"><div class="form-group"><label>Petugas</label><input type="text" id="agendaPetugas" placeholder="Nama petugas"></div><div class="form-group"><label>Pejabat</label><input type="text" id="agendaPejabat" placeholder="Nama pejabat"></div></div><div class="form-group"><label>Keterangan</label><textarea id="agendaKeterangan" rows="3" placeholder="Catatan tambahan..."></textarea></div><div class="form-group"><label><input type="checkbox" id="sendWhatsApp" checked><i class="fab fa-whatsapp" style="color:#25D366;"></i> Kirim notifikasi via WhatsApp</label></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAgendaModal()">Batal</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>
 
-    <!-- USER MODAL -->
     <div class="modal" id="userModal"><div class="modal-content"><div class="modal-header"><h3 id="userModalTitle">Tambah User</h3><button class="modal-close" onclick="closeUserModal()">&times;</button></div><form id="userForm"><input type="hidden" id="userOldUsername"><div class="form-group"><label>Username *</label><input type="text" id="userUsername" required></div><div class="form-group"><label>Password *</label><input type="password" id="userPassword" required></div><div class="form-group"><label>Nama Lengkap *</label><input type="text" id="userNama" required></div><div class="form-group"><label>Jabatan *</label><input type="text" id="userJabatan" required></div><div class="form-group"><label>Role *</label><select id="userRole" required><option value="user">User</option><option value="admin">Admin</option></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeUserModal()">Batal</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>
 
     <div id="toast" class="toast"></div>
