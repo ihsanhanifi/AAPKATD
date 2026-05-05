@@ -7,7 +7,6 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="format-detection" content="telephone=no">
     <title>Agenda Pimpinan - Kemenag Kab. Tanah Datar</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -17,8 +16,7 @@
     <div id="loginPage" class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png" 
-                     alt="Logo Kemenag" class="logo" onerror="this.style.display='none'">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png" alt="Logo" class="logo" onerror="this.style.display='none'">
                 <h2>Agenda Pimpinan</h2>
                 <p>Kementerian Agama Kabupaten Tanah Datar</p>
             </div>
@@ -109,10 +107,33 @@
                     </div>
                 </div>
 
-                <!-- USERS -->
+                <!-- USERS (COMPACT TABLE) -->
                 <div id="page-users" class="page admin-only">
-                    <div class="page-actions"><div><h3 style="margin:0;color:var(--primary);"><i class="fas fa-users"></i> Manajemen User</h3><small class="text-muted">Kelola akses pengguna sistem</small></div><button class="btn btn-success" onclick="openUserModal()"><i class="fas fa-user-plus"></i> Tambah User</button></div>
-                    <div class="card"><div class="card-body"><div id="usersContainer" class="users-grid"></div></div></div>
+                    <div class="page-header-compact">
+                        <div>
+                            <h3><i class="fas fa-users"></i> Manajemen User</h3>
+                            <small class="text-muted">Kelola akses pengguna sistem</small>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="openUserModal()"><i class="fas fa-user-plus"></i> Tambah User</button>
+                    </div>
+                    <div class="card compact-card">
+                        <div class="card-body" style="padding: 0;">
+                            <div class="table-responsive">
+                                <table class="table table-compact" id="usersTableCompact">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;">No</th>
+                                            <th style="width: 250px;">User</th>
+                                            <th>Jabatan</th>
+                                            <th style="width: 100px;">Role</th>
+                                            <th style="width: 150px;">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- SETTINGS -->
