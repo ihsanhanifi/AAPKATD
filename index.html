@@ -13,8 +13,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Wrapper untuk mencegah overflow -->
-    <div id="appWrapper" style="overflow-x: hidden; width: 100%; min-height: 100vh;">
     <!-- LOGIN PAGE -->
     <div id="loginPage" class="login-container">
         <div class="login-box">
@@ -27,11 +25,11 @@
             <form id="loginForm">
                 <div class="form-group">
                     <label><i class="fas fa-user"></i> Username</label>
-                    <input type="text" id="loginUsername" placeholder="Masukkan username" required>
+                    <input type="text" id="loginUsername" placeholder="Masukkan username" required autocomplete="username">
                 </div>
                 <div class="form-group">
                     <label><i class="fas fa-lock"></i> Password</label>
-                    <input type="password" id="loginPassword" placeholder="Masukkan password" required>
+                    <input type="password" id="loginPassword" placeholder="Masukkan password" required autocomplete="current-password">
                 </div>
                 <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
                     <i class="fas fa-sign-in-alt"></i> Masuk
@@ -89,7 +87,7 @@
         <main class="main-content">
             <!-- TOP BAR -->
             <header class="topbar">
-                <button class="menu-toggle" id="menuToggle">
+                <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
                     <i class="fas fa-bars"></i>
                 </button>
                 <h2 id="pageTitle">Dashboard</h2>
@@ -100,7 +98,8 @@
 
             <!-- PAGES -->
             <div class="content-area">
-                <!-- DASHBOARD PAGE -->
+                
+                <!-- ========== DASHBOARD PAGE ========== -->
                 <div id="page-dashboard" class="page active">
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -143,7 +142,10 @@
 
                     <div class="card">
                         <div class="card-header">
-                            <h3><i class="fas fa-clock"></i> Agenda Mendatang</h3>
+                            <h3><i class="fas fa-clock"></i> 5 Agenda Mendatang</h3>
+                            <button type="button" class="btn btn-sm btn-primary" id="btnViewAllAgenda">
+                                <i class="fas fa-arrow-right"></i> Lihat Semua
+                            </button>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -154,6 +156,7 @@
                                             <th>Waktu</th>
                                             <th>Kegiatan</th>
                                             <th>Tempat</th>
+                                            <th>PJ & Pakaian</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
@@ -164,7 +167,7 @@
                     </div>
                 </div>
 
-                <!-- AGENDA PAGE -->
+                <!-- ========== AGENDA PAGE ========== -->
                 <div id="page-agenda" class="page">
                     <div class="page-actions">
                         <div class="filter-group">
@@ -204,22 +207,22 @@
                     </div>
                 </div>
 
-                <!-- CALENDAR PAGE -->
+                <!-- ========== CALENDAR PAGE ========== -->
                 <div id="page-calendar" class="page">
                     <div class="card">
                         <div class="card-header">
                             <div class="calendar-nav">
-                                <button class="btn btn-sm btn-outline" onclick="changeMonth(-1)">
+                                <button class="btn btn-sm btn-outline" onclick="changeMonth(-1)" aria-label="Bulan sebelumnya">
                                     <i class="fas fa-chevron-left"></i>
                                 </button>
                                 <h3 id="calendarMonthYear"></h3>
-                                <button class="btn btn-sm btn-outline" onclick="changeMonth(1)">
+                                <button class="btn btn-sm btn-outline" onclick="changeMonth(1)" aria-label="Bulan berikutnya">
                                     <i class="fas fa-chevron-right"></i>
                                 </button>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="calendar" id="calendarGrid"></div>
+                            <div class="calendar" id="calendarGrid" role="grid"></div>
                         </div>
                     </div>
                     <div class="card" id="calendarEvents">
@@ -232,7 +235,7 @@
                     </div>
                 </div>
 
-                <!-- IMPORT/EXPORT PAGE -->
+                <!-- ========== IMPORT/EXPORT PAGE ========== -->
                 <div id="page-importExport" class="page">
                     <div class="row">
                         <div class="col-md-6">
@@ -242,7 +245,7 @@
                                 </div>
                                 <div class="card-body">
                                     <p>Import data agenda dari file JSON</p>
-                                    <div class="upload-area" id="uploadArea">
+                                    <div class="upload-area" id="uploadArea" tabindex="0">
                                         <i class="fas fa-cloud-upload-alt fa-3x"></i>
                                         <p>Drag & drop file JSON di sini</p>
                                         <p>atau</p>
@@ -285,8 +288,8 @@
                     </div>
                 </div>
 
-                <!-- USERS PAGE (Admin Only) -->
-                <div id="page-users" class="page">
+                <!-- ========== USERS PAGE (Admin Only) ========== -->
+                <div id="page-users" class="page admin-only">
                     <div class="page-actions">
                         <button class="btn btn-success" onclick="openUserModal()">
                             <i class="fas fa-user-plus"></i> Tambah User
@@ -313,7 +316,7 @@
                     </div>
                 </div>
 
-                <!-- SETTINGS PAGE -->
+                <!-- ========== SETTINGS PAGE ========== -->
                 <div id="page-settings" class="page">
                     <div class="card">
                         <div class="card-header">
@@ -322,7 +325,7 @@
                         <div class="card-body">
                             <div class="form-group">
                                 <label>Nomor WhatsApp Admin (format: 628xxxxxxxxxx)</label>
-                                <input type="text" id="waNumber" class="form-control" placeholder="6281234567890">
+                                <input type="tel" id="waNumber" class="form-control" placeholder="6281234567890" pattern="^[0-9]{10,13}$">
                                 <small class="text-muted">Nomor ini akan menerima notifikasi setiap agenda baru</small>
                             </div>
                             <button class="btn btn-primary" onclick="saveWaNumber()">
@@ -331,101 +334,100 @@
                         </div>
                     </div>
                 </div>
+
             </div>
         </main>
     </div>
 
-    <!-- AGENDA MODAL -->
-    <div class="modal" id="agendaModal">
+    <!-- ========== AGENDA MODAL ========== -->
+    <div class="modal" id="agendaModal" role="dialog" aria-modal="true" aria-labelledby="agendaModalTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="agendaModalTitle">Tambah Agenda</h3>
-                <button class="modal-close" onclick="closeAgendaModal()">&times;</button>
+                <button class="modal-close" onclick="closeAgendaModal()" aria-label="Tutup">&times;</button>
             </div>
             <form id="agendaForm">
-    <input type="hidden" id="agendaId">
-    <div class="form-row">
-        <div class="form-group">
-            <label>Tanggal *</label>
-            <input type="date" id="agendaTanggal" required>
-        </div>
-    </div>
-    <div class="form-row">
-        <div class="form-group">
-            <label>Waktu Mulai *</label>
-            <input type="time" id="agendaWaktuMulai" required>
-        </div>
-        <div class="form-group">
-            <label>Waktu Selesai *</label>
-            <input type="time" id="agendaWaktuSelesai" required>
-        </div>
-    </div>
-    <div class="form-group">
-        <label>Tempat *</label>
-        <input type="text" id="agendaTempat" required placeholder="Lokasi kegiatan">
-    </div>
-    <div class="form-group">
-        <label>Kegiatan *</label>
-        <input type="text" id="agendaKegiatan" required placeholder="Nama kegiatan">
-    </div>
-    
-    <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border);">
-    <h4 style="font-size:0.85rem; color:var(--primary); margin:10px 0;">Detail Tambahan (Opsional)</h4>
-    
-    <div class="form-row">
-        <div class="form-group">
-            <label>Penanggung Jawab</label>
-            <input type="text" id="agendaPJ" placeholder="Nama PIC">
-        </div>
-        <div class="form-group">
-            <label>Pakaian</label>
-            <input type="text" id="agendaPakaian" placeholder="Contoh: PDH / Batik / Kemeja">
-        </div>
-    </div>
-    <div class="form-row">
-        <div class="form-group">
-            <label>Petugas</label>
-            <input type="text" id="agendaPetugas" placeholder="Nama petugas/panitia">
-        </div>
-        <div class="form-group">
-            <label>Pejabat</label>
-            <input type="text" id="agendaPejabat" placeholder="Nama pejabat yang hadir">
-        </div>
-    </div>
-    <div class="form-group">
-        <label>Keterangan</label>
-        <textarea id="agendaKeterangan" rows="3" placeholder="Catatan tambahan..."></textarea>
-    </div>
-    <div class="form-group">
-        <label>
-            <input type="checkbox" id="sendWhatsApp" checked>
-            <i class="fab fa-whatsapp" style="color:#25D366;"></i> Kirim notifikasi via WhatsApp
-        </label>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeAgendaModal()">Batal</button>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
-    </div>
-</form>
+                <input type="hidden" id="agendaId">
+                <div class="form-group">
+                    <label>Tanggal *</label>
+                    <input type="date" id="agendaTanggal" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Waktu Mulai *</label>
+                        <input type="time" id="agendaWaktuMulai" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Waktu Selesai *</label>
+                        <input type="time" id="agendaWaktuSelesai" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tempat *</label>
+                    <input type="text" id="agendaTempat" required placeholder="Lokasi kegiatan">
+                </div>
+                <div class="form-group">
+                    <label>Kegiatan *</label>
+                    <input type="text" id="agendaKegiatan" required placeholder="Nama kegiatan">
+                </div>
+                
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border);">
+                <h4 style="font-size:0.85rem; color:var(--primary); margin:10px 0;">Detail Tambahan (Opsional)</h4>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Penanggung Jawab</label>
+                        <input type="text" id="agendaPJ" placeholder="Nama PIC">
+                    </div>
+                    <div class="form-group">
+                        <label>Pakaian</label>
+                        <input type="text" id="agendaPakaian" placeholder="Contoh: PDH / Batik / Kemeja">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Petugas</label>
+                        <input type="text" id="agendaPetugas" placeholder="Nama petugas/panitia">
+                    </div>
+                    <div class="form-group">
+                        <label>Pejabat</label>
+                        <input type="text" id="agendaPejabat" placeholder="Nama pejabat yang hadir">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Keterangan</label>
+                    <textarea id="agendaKeterangan" rows="3" placeholder="Catatan tambahan..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="sendWhatsApp" checked>
+                        <i class="fab fa-whatsapp" style="color:#25D366;"></i> Kirim notifikasi via WhatsApp
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeAgendaModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- USER MODAL -->
-    <div class="modal" id="userModal">
+    <!-- ========== USER MODAL ========== -->
+    <div class="modal" id="userModal" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="userModalTitle">Tambah User</h3>
-                <button class="modal-close" onclick="closeUserModal()">&times;</button>
+                <button class="modal-close" onclick="closeUserModal()" aria-label="Tutup">&times;</button>
             </div>
             <form id="userForm">
                 <input type="hidden" id="userOldUsername">
                 <div class="form-group">
                     <label>Username *</label>
-                    <input type="text" id="userUsername" required>
+                    <input type="text" id="userUsername" required autocomplete="username">
                 </div>
                 <div class="form-group">
                     <label>Password *</label>
-                    <input type="password" id="userPassword" required>
+                    <input type="password" id="userPassword" required autocomplete="new-password">
                 </div>
                 <div class="form-group">
                     <label>Nama Lengkap *</label>
@@ -453,16 +455,15 @@
     </div>
 
     <!-- TOAST NOTIFICATION -->
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
     <!-- LOADING OVERLAY -->
-    <div id="loading" class="loading-overlay" style="display:none;">
+    <div id="loading" class="loading-overlay" style="display:none;" aria-busy="true">
         <div class="spinner"></div>
         <p>Memuat data...</p>
     </div>
 
-    <script src="js/app.js"></script>
-        </div>
+    <!-- SINGLE SCRIPT REFERENCE -->
     <script src="js/app.js"></script>
 </body>
 </html>
