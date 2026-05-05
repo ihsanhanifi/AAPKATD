@@ -118,61 +118,69 @@ function closeAgendaModal(){document.getElementById('agendaModal').classList.rem
 window.editAgenda=function(id){openAgendaModal(id);};
 window.deleteAgenda=async function(id){if(!confirm('Hapus agenda ini?'))return;const res=await api('deleteAgenda',{id});if(res.status==='success'){showToast(res.message,'success');loadAgenda();}};
 
-async function loadUsers(){const res=await api('getUsers');if(res.status==='success')renderUserCards(res.data);}
-function renderUserCards(users){ const container=document.getElementById('usersContainer'); if(!container)return; container.innerHTML=''; if(!users.length){container.innerHTML='<div class="text-center text-muted" style="padding:30px;"><i class="fas fa-users fa-2x mb-2"></i><br>Tidak ada user</div>';return;}
-    users.forEach(u=>{ const rc=(u.role||'user').toString().trim().toLowerCase(); const card=document.createElement('div'); card.className='user-card';
-    card.innerHTML=`<div class="user-card-header"><div class="user-avatar-lg">${(u.nama_lengkap||u.username).charAt(0).toUpperCase()}</div><span class="badge-role ${rc==='admin'?'role-admin':'role-user'}"><i class="${rc==='admin'?'fas fa-shield-alt':'fas fa-user'}"></i> ${rc==='admin'?'Admin':'User'}</span></div><div class="user-card-body"><h4>${u.nama_lengkap||'-'}</h4><p class="text-muted">📧 @${u.username} | 💼 ${u.jabatan||'-'}</p></div><div class="user-card-footer"><button class="btn btn-warning btn-sm" onclick="editUser('${u.username}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')" ${rc==='admin'?'disabled':''}><i class="fas fa-trash"></i> Hapus</button></div>`; container.appendChild(card); });
+// ✅ USER MANAGEMENT - COMPACT TABLE RENDER
+async function loadUsers(){
+    const res = await api('getUsers');
+    if(res.status === 'success') renderUsersTableCompact(res.data);
 }
-function openUserModal(username=null){document.getElementById('userModal').classList.add('active');document.getElementById('userModalTitle').textContent=username?'Edit User':'Tambah User';document.getElementById('userForm').reset();document.getElementById('userOldUsername').value='';document.getElementById('userPassword').placeholder='Masukkan password';document.getElementById('userPassword').required=true;if(username){const cards=document.querySelectorAll('.user-card'); for(let c of cards){if(c.querySelector('.text-muted')?.textContent.includes(username)){document.getElementById('userUsername').value=username;document.getElementById('userOldUsername').value=username;document.getElementById('userNama').value=c.querySelector('h4').textContent;document.getElementById('userJabatan').value=c.querySelector('.text-muted').textContent.split('|')[1]?.trim().substring(3)||'';document.getElementById('userRole').value=c.querySelector('.badge-role').textContent.trim().toLowerCase().includes('admin')?'admin':'user';document.getElementById('userPassword').required=false;document.getElementById('userPassword').placeholder='Kosongkan jika tidak diubah';break;}}}}
+
+function renderUsersTableCompact(users){
+    const tbody = document.querySelector('#usersTableCompact tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    
+    if(!users.length){
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 30px;"><i class="fas fa-users fa-2x mb-2"></i><br>Tidak ada user</td></tr>';
+        return;
+    }
+    
+    users.forEach((u, index) => {
+        const rc = (u.role || 'user').toString().trim().toLowerCase();
+        const roleClass = rc === 'admin' ? 'role-admin' : 'role-user';
+        const roleLabel = rc === 'admin' ? 'Admin' : 'User';
+        const roleIcon = rc === 'admin' ? 'fas fa-shield-alt' : 'fas fa-user';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td>
+                <div class="user-info-compact">
+                    <div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div>
+                    <div class="user-details-compact">
+                        <div class="user-name-compact">${u.nama_lengkap || '-'}</div>
+                        <div class="user-username-compact">@${u.username}</div>
+                    </div>
+                </div>
+            </td>
+            <td>${u.jabatan || '-'}</td>
+            <td>
+                <span class="badge-compact ${roleClass}">
+                    <i class="${roleIcon}"></i> ${roleLabel}
+                </span>
+            </td>
+            <td>
+                <div class="action-btns-compact">
+                    <button class="btn btn-warning btn-sm" onclick="editUser('${u.username}')" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')" ${rc === 'admin' ? 'disabled' : ''} title="Hapus">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function openUserModal(username=null){document.getElementById('userModal').classList.add('active');document.getElementById('userModalTitle').textContent=username?'Edit User':'Tambah User';document.getElementById('userForm').reset();document.getElementById('userOldUsername').value='';document.getElementById('userPassword').placeholder='Masukkan password';document.getElementById('userPassword').required=true;if(username){const rows=document.querySelectorAll('#usersTableCompact tbody tr'); for(let row of rows){if(row.querySelector('.user-username-compact')?.textContent.includes(username)){document.getElementById('userUsername').value=username;document.getElementById('userOldUsername').value=username;document.getElementById('userNama').value=row.querySelector('.user-name-compact').textContent;document.getElementById('userJabatan').value=row.querySelector('td:nth-child(3)').textContent;document.getElementById('userRole').value=(row.querySelector('.badge-compact').textContent || '').trim().toLowerCase().includes('admin')?'admin':'user';document.getElementById('userPassword').required=false;document.getElementById('userPassword').placeholder='Kosongkan jika tidak diubah';break;}}}}
 async function handleUserSubmit(e){e.preventDefault();const old=document.getElementById('userOldUsername').value,p={username:document.getElementById('userUsername').value,role:document.getElementById('userRole').value,nama_lengkap:document.getElementById('userNama').value,jabatan:document.getElementById('userJabatan').value},pwd=document.getElementById('userPassword').value;let res;if(old){if(pwd)p.newPassword=pwd;res=await api('updateUser',p);}else{p.password=pwd;res=await api('addUser',p);}if(res.status==='success'){showToast(res.message,'success');closeUserModal();loadUsers();}}
 function closeUserModal(){document.getElementById('userModal').classList.remove('active');}
 window.editUser=function(u){openUserModal(u);};
 window.deleteUser=async function(u){if(!confirm(`Hapus user ${u}?`))return;const res=await api('deleteUser',{username:u});if(res.status==='success'){showToast(res.message,'success');loadUsers();}};
 
 async function loadDashboard(){ const td=new Date().toISOString().split('T')[0],we=new Date();we.setDate(we.getDate()+7);const weS=we.toISOString().split('T')[0],mS=td.substring(0,7)+'-01'; const active=allAgenda.filter(a=>a.status!=='selesai'); document.getElementById('statTotal').textContent=active.length; document.getElementById('statToday').textContent=active.filter(a=>a.tanggal===td).length; document.getElementById('statWeek').textContent=active.filter(a=>a.tanggal>=td&&a.tanggal<=weS).length; document.getElementById('statMonth').textContent=active.filter(a=>a.tanggal>=mS).length; renderUpcomingTable(); }
-function renderUpcomingTable(){ 
-    const tbody = document.querySelector('#upcomingTable tbody'); 
-    if(!tbody) return; 
-    tbody.innerHTML=''; 
-    
-    const td = new Date().toISOString().split('T')[0];
-    
-    // ✅ Filter Data: Hanya Agenda Aktif & Tanggal >= Hari Ini
-    const upcomingData = allAgenda.filter(a => a.status !== 'selesai' && a.tanggal && a.tanggal >= td)
-        .sort((a, b) => (a.tanggal || '').localeCompare(b.tanggal || '') || (a.waktu_mulai || '').localeCompare(b.waktu_mulai || ''));
-    
-    // ✅ UPDATE JUDUL SECARA OTOMATIS
-    const count = upcomingData.length;
-    document.getElementById('upcomingTitle').textContent = count > 0 ? `${count} Agenda Mendatang` : 'Agenda Mendatang';
-
-    // Ambil maksimal 5 data untuk ditampilkan
-    const up = upcomingData.slice(0, 5); 
-    
-    if(!up.length){
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><i class="fas fa-calendar-check fa-2x mb-2"></i><br>Tidak ada agenda mendatang</td></tr>';
-        return;
-    }
-
-    up.forEach(a => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
-            <td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td>
-            <td><strong>${a.kegiatan||'-'}</strong></td>
-            <td>${a.tempat||'-'}</td>
-            <td>
-                <div style="font-size:0.85rem;">
-                    👤 ${a.penanggung_jawab||'-'} 
-                    ${a.pakaian?`<br><span class="badge badge-info" style="font-size:0.7rem;">👔 ${a.pakaian}</span>`:''}
-                </div>
-            </td>
-            <td>
-                <button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
+function renderUpcomingTable(){ const tbody=document.querySelector('#upcomingTable tbody');if(!tbody)return;tbody.innerHTML=''; const td=new Date().toISOString().split('T')[0]; const up=allAgenda.filter(a=>a.status!=='selesai' && a.tanggal && a.tanggal>=td).sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||'')).slice(0,5); document.getElementById('upcomingTitle').textContent = up.length > 0 ? `${up.length} Agenda Mendatang` : 'Agenda Mendatang'; if(!up.length){tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted"><i class="fas fa-calendar-check fa-2x mb-2"></i><br>Tidak ada agenda mendatang</td></tr>';return;} up.forEach(a=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td><td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td><td><strong>${a.kegiatan||'-'}</strong></td><td>${a.tempat||'-'}</td><td><div style="font-size:0.85rem;">👤 ${a.penanggung_jawab||'-'} ${a.pakaian?`<br><span class="badge badge-info" style="font-size:0.7rem;">👔 ${a.pakaian}</span>`:''}</div></td><td><button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button></td>`;tbody.appendChild(tr);});}
 
 function renderCalendar(){const y=calendarDate.getFullYear(),m=calendarDate.getMonth(),months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];document.getElementById('calendarMonthYear').textContent=`${months[m]} ${y}`;const grid=document.getElementById('calendarGrid');if(!grid)return;grid.innerHTML='';['Min','Sen','Sel','Rab','Kam','Jum','Sab'].forEach(d=>{const h=document.createElement('div');h.className='calendar-header';h.textContent=d;grid.appendChild(h);});const fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate(),td=new Date().toISOString().split('T')[0];for(let i=0;i<fd;i++){const d=document.createElement('div');d.className='calendar-day other-month';grid.appendChild(d);}for(let d=1;d<=dm;d++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,el=document.createElement('div');el.className='calendar-day';if(ds===td)el.classList.add('today');const count=allAgenda.filter(a=>a.tanggal===ds).length;el.innerHTML=`<div class="day-number">${d}</div>${count?`<span class="day-events">${count}</span>`:''}`;el.onclick=()=>showCalendarEvents(ds);grid.appendChild(el);}}
 window.changeMonth=function(dir){calendarDate.setMonth(calendarDate.getMonth()+dir);renderCalendar();};
