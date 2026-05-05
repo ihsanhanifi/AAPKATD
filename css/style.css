@@ -139,6 +139,27 @@ input[type="checkbox"]{width:16px;height:16px;margin:0;cursor:pointer;accent-col
 .action-btns-compact { display: flex; gap: 6px; }
 .action-btns-compact .btn { padding: 6px 12px; font-size: 0.8rem; min-height: 32px; }
 
+/* APP FOOTER */
+.app-footer {
+    padding: 15px 25px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    background: var(--white);
+    font-size: 0.85rem;
+    color: var(--gray);
+    margin-top: auto;
+    flex-shrink: 0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+}
+.app-footer strong {
+    color: var(--primary);
+    font-weight: 700;
+}
+.app-footer .footer-role {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
 /* UTILS & RESPONSIVE */
 .text-muted{color:var(--gray);} .text-center{text-align:center;} .hidden{display:none!important;} .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:25px;}
 .page{display:none;opacity:0;transition:opacity 0.15s ease;} .page.active{display:block;opacity:1;}
@@ -158,6 +179,8 @@ input[type="checkbox"]{width:16px;height:16px;margin:0;cursor:pointer;accent-col
     .page-header-compact { flex-direction: column; align-items: stretch; text-align: center; }
     .action-btns-compact { flex-direction: column; gap: 4px; }
     .action-btns-compact .btn { width: 100%; }
+    .app-footer { padding: 12px 15px; font-size: 0.78rem; }
+    .app-footer strong { display: block; margin-bottom: 2px; }
 }
 @media(max-width:480px){html{font-size:14px;} .login-box{padding:28px 22px;margin:8px;} .login-header h2{font-size:1.35rem;} .logo{width:70px;height:70px;} .content-area{padding:14px 12px;} .card-header h3{font-size:1rem;} .stats-grid{gap:12px;} .stat-card{padding:16px;gap:14px;} .stat-icon{width:46px;height:46px;font-size:1.1rem;} .stat-info h3{font-size:1.35rem;} .stat-info p{font-size:0.75rem;} .table{min-width:590px;} .table th,.table td{padding:9px 7px;font-size:0.78rem;} .badge{padding:4px 9px;font-size:0.68rem;} .calendar-day{min-height:44px;padding:7px 3px;font-size:0.75rem;} .calendar-header{padding:7px 3px;font-size:0.68rem;} .modal-header h3{font-size:1.05rem;} .btn{padding:10px 17px;font-size:0.88rem;} .form-row{flex-direction:column;gap:0;} .form-row .form-group{width:100%;min-width:100%;}}
 @media(max-width:360px){html{font-size:13px;} .table{min-width:540px;} .calendar{gap:3px;} .calendar-day{min-height:38px;padding:5px 2px;font-size:0.7rem;} .login-box{padding:24px 18px;}}
