@@ -1,7 +1,7 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbxsMinDFpWXajV5PEJY-BGbF6z0DywgzFr2Jws7f_Co1W-5SqMhkFHGXXksqTcIt9IQOw/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
 let inactivityTimer, sessionCheckTimer;
-const SESSION_TIMEOUT = 10 * 60 * 1000;
+const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 menit
 
 document.addEventListener('DOMContentLoaded', () => { checkLogin(); setupEvents(); updateClock(); setInterval(updateClock, 1000); });
 
@@ -87,7 +87,7 @@ async function loadAgenda() {
     if(res.status==='success'){ allAgenda=res.data||[]; normalizeStatus(); renderAgendaTable(); loadDashboard(); } return res;
 }
 
-// ✅ PERBAIKAN PAYLOAD AGENDA (TIDAK HILANG LAGI)
+// ✅ PERBAIKAN PAYLOAD AGENDA (LENGKAP & TIDAK HILANG)
 async function handleAgendaSubmit(e) {
     e.preventDefault(); 
     const id=document.getElementById('agendaId').value; 
@@ -111,11 +111,11 @@ async function handleAgendaSubmit(e) {
 
 function openWhatsApp(msg) { let ph=localStorage.getItem('waNumber')||''; ph=ph.replace(/\D/g,''); if(!ph.startsWith('62'))ph='62'+ph.replace(/^0/,''); if(ph.length<10) return showToast('Atur nomor WA di Pengaturan dulu', 'warning'); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`,'_blank'); }
 
-// ✅ WHATSAPP FORMAT LENGKAP DENGAN JUDUL, LOKASI, KEGIATAN
+// ✅ FORMAT WA PERSIS SEPERTI PERMINTAAN
 window.sendWhatsAppDirect = function(a) {
     let msg = `🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `📋 *AGENDA KEGIATAN*\n\n`;
+    msg += `📋 *AGENDA KEGIATAN PIMPINAN*\n\n`;
     msg += `📅 *Tanggal:* ${formatDate(a.tanggal)}\n`;
     msg += `⏰ *Waktu:* ${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}\n`;
     msg += `📍 *Tempat/Lokasi:* ${a.tempat||'-'}\n\n`;
@@ -138,23 +138,52 @@ window.sendWhatsAppDirect = function(a) {
 window.sendWhatsAppById = function(id) { const a=allAgenda.find(x=>String(x.id)===String(id)); if(!a){showToast('Memuat data terbaru...','info');loadAgenda().then(()=>{const r=allAgenda.find(x=>String(x.id)===String(id));r?sendWhatsAppDirect(r):showToast('Data tidak ditemukan.','error');});return;} sendWhatsAppDirect(a); }
 window.sendWhatsApp = window.sendWhatsAppDirect;
 
+// ✅ KIRIM HARI INI (FORMAT SERAGAM)
 window.sendDailyAgenda = function() {
     const td = new Date().toISOString().split('T')[0];
     const daily = allAgenda.filter(a => a.tanggal === td && a.status !== 'selesai').sort((a,b)=>(a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
     if(daily.length===0) return showToast('Tidak ada agenda aktif hari ini', 'info');
+    if(!confirm(`Kirim ${daily.length} agenda hari ini ke WhatsApp?`)) return;
+    
     let msg = `🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n━━━━━━━━━━━━━━\n📋 *AGENDA HARI INI*\n📅 ${formatDate(td)}\n\n`;
-    daily.forEach((a,i)=>{ msg+=`*${i+1}. ${a.kegiatan||'Kegiatan'}*\n⏰ ${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}\n📍 ${a.tempat||'-'}\n`; if(a.penanggung_jawab) msg+=`👤 PJ: ${a.penanggung_jawab}\n`; msg+=`\n`; });
-    msg+=`━━━━━━━━━━━━━━\n👤 *Dibuat oleh:* ${currentUser.username}\n_Mohon kehadiran tepat waktu._`;
+    daily.forEach((a,i)=>{ 
+        msg+=`🔹 *${i+1}. ${a.kegiatan||'Kegiatan'}*\n`;
+        msg+=`⏰ ${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}\n📍 ${a.tempat||'-'}\n`; 
+        if(a.penanggung_jawab) msg+=`👤 PJ: ${a.penanggung_jawab}\n`; 
+        msg+=`──────────────────────\n`; 
+    });
+    msg+=`👤 *Dibuat oleh:* ${currentUser.username}\n_Mohon kehadiran tepat waktu. Terima kasih._`;
     openWhatsApp(msg);
 }
+
+// ✅ KIRIM TERPILIH (BULK) - DIPERBAIKI TOTAL
 window.sendSelectedAgendas = function() {
     const checked = document.querySelectorAll('.agenda-check:checked');
-    if(checked.length===0) return showToast('Pilih minimal 1 agenda', 'warning');
-    const ids = Array.from(checked).map(c=>c.value);
-    const sel = allAgenda.filter(a=>ids.includes(a.id)).sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
-    let msg = `🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n━━━━━━━━━━━━━━\n📋 *AGENDA TERPILIH (${sel.length})*\n\n`;
-    sel.forEach((a,i)=>{ msg+=`📅 ${formatDate(a.tanggal)}\n*${i+1}. ${a.kegiatan||'Kegiatan'}*\n⏰ ${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}\n📍 ${a.tempat||'-'}\n`; if(a.penanggung_jawab) msg+=`👤 PJ: ${a.penanggung_jawab}\n`; msg+=`\n`; });
-    msg+=`━━━━━━━━━━━━━━\n👤 *Dibuat oleh:* ${currentUser.username}`;
+    if(checked.length === 0) return showToast('Pilih minimal 1 agenda untuk dikirim.', 'warning');
+
+    const ids = Array.from(checked).map(c => c.value);
+    const sel = allAgenda.filter(a => ids.includes(a.id))
+        .sort((a,b) => (a.tanggal||'').localeCompare(b.tanggal||'') || (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
+
+    if(!confirm(`Kirim ${sel.length} agenda sekaligus ke WhatsApp?\n(Pastikan data sudah lengkap)`)) return;
+
+    let msg = `🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `📋 *AGENDA KEGIATAN PIMPINAN (TERPILIH: ${sel.length})*\n\n`;
+
+    sel.forEach((a, i) => {
+        msg += `🔹 *${i+1}. ${a.kegiatan||'Kegiatan'}*\n`;
+        msg += `📅 ${formatDate(a.tanggal)} | ⏰ ${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}\n`;
+        msg += `📍 ${a.tempat||'-'}\n`;
+        if(a.penanggung_jawab) msg += `👤 PJ: ${a.penanggung_jawab}\n`;
+        if(a.pakaian) msg += `👔 Pakaian: ${a.pakaian}\n`;
+        if(a.petugas) msg += `👥 Petugas: ${a.petugas}\n`;
+        if(a.pejabat) msg += `🏅 Pejabat: ${a.pejabat}\n`;
+        msg += `──────────────────────\n`;
+    });
+
+    msg += `👤 *Dibuat oleh:* ${currentUser.username}\n`;
+    msg += `_Mohon kehadiran tepat waktu. Terima kasih._`;
     openWhatsApp(msg);
 }
 
@@ -239,5 +268,25 @@ function showToast(msg,type='info'){const t=document.getElementById('toast');t.t
 function updateClock(){const n=new Date();const o={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};const e=document.getElementById('currentDateTime');if(e)e.textContent=n.toLocaleDateString('id-ID',o);}
 function formatDate(ds){if(!ds)return'-';if(ds instanceof Date){const d=ds.getDate(),m=ds.getMonth(),y=ds.getFullYear();const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${d} ${mo[m]} ${y}`;}const p=String(ds).trim().split(/[-T]/);if(p.length>=3){const[y,m,d]=p;const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${parseInt(d,10)} ${mo[parseInt(m,10)-1]} ${y}`;}return String(ds);}
 
-// GLOBAL EXPOSURE
-window.navigateTo=window.navigateTo||navigateTo;window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect;window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById;window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect;window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda;window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas;window.editAgenda=window.editAgenda||editAgenda;window.deleteAgenda=window.deleteAgenda||deleteAgenda;window.openAgendaModal=window.openAgendaModal||openAgendaModal;window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal;window.loadAgenda=window.loadAgenda||loadAgenda;window.changeMonth=window.changeMonth||changeMonth;window.openUserModal=window.openUserModal||openUserModal;window.closeUserModal=window.closeUserModal||closeUserModal;window.editUser=window.editUser||editUser;window.deleteUser=window.deleteUser||deleteUser;window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser;window.allowLoginUser=window.allowLoginUser||allowLoginUser;window.confirmImport=window.confirmImport||confirmImport;window.exportAgenda=window.exportAgenda||exportAgenda;window.saveWaNumber=window.saveWaNumber||saveWaNumber;
+// ✅ GLOBAL EXPORT (SEMUA TOMBOL BERFUNGSI)
+window.navigateTo=window.navigateTo||navigateTo;
+window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect;
+window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById;
+window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect;
+window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda;
+window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas;
+window.editAgenda=window.editAgenda||editAgenda;
+window.deleteAgenda=window.deleteAgenda||deleteAgenda;
+window.openAgendaModal=window.openAgendaModal||openAgendaModal;
+window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal;
+window.loadAgenda=window.loadAgenda||loadAgenda;
+window.changeMonth=window.changeMonth||changeMonth;
+window.openUserModal=window.openUserModal||openUserModal;
+window.closeUserModal=window.closeUserModal||closeUserModal;
+window.editUser=window.editUser||editUser;
+window.deleteUser=window.deleteUser||deleteUser;
+window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser;
+window.allowLoginUser=window.allowLoginUser||allowLoginUser;
+window.confirmImport=window.confirmImport||confirmImport;
+window.exportAgenda=window.exportAgenda||exportAgenda;
+window.saveWaNumber=window.saveWaNumber||saveWaNumber;
