@@ -1,7 +1,34 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbxsMinDFpWXajV5PEJY-BGbF6z0DywgzFr2Jws7f_Co1W-5SqMhkFHGXXksqTcIt9IQOw/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
 let inactivityTimer, sessionCheckTimer;
-const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 menit
+const SESSION_TIMEOUT = 10 * 60 * 1000;
+
+// ✅ SISTEM LOADING COUNTER + TIMEOUT (TIDAK PERNAH STUCK)
+let loadingCounter = 0;
+let loadingTimeout;
+
+function showLoading() {
+    loadingCounter++;
+    clearTimeout(loadingTimeout);
+    const el = document.getElementById('loading');
+    if (el) el.style.display = 'flex';
+    // Fallback: paksa hide setelah 8 detik jika request hang
+    loadingTimeout = setTimeout(() => {
+        loadingCounter = 0;
+        const el = document.getElementById('loading');
+        if (el) el.style.display = 'none';
+    }, 8000);
+}
+
+function hideLoading() {
+    loadingCounter--;
+    clearTimeout(loadingTimeout);
+    if (loadingCounter <= 0) {
+        loadingCounter = 0;
+        const el = document.getElementById('loading');
+        if (el) el.style.display = 'none';
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => { checkLogin(); setupEvents(); updateClock(); setInterval(updateClock, 1000); });
 
@@ -21,20 +48,37 @@ function setupEvents() {
     document.getElementById('selectAllAgenda')?.addEventListener('change', e => { document.querySelectorAll('.agenda-check').forEach(cb => cb.checked = e.target.checked); });
 }
 
+// ✅ API DENGAN ABORTCONTROLLER & TIMEOUT (CEGAH LOADING NYANGKUT)
 async function api(action, payload={}) {
-    resetActivityTimer(); showLoading(true);
+    resetActivityTimer();
+    showLoading();
     try {
-        const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({action,...payload}) });
-        if(!res.ok) throw new Error(`HTTP ${res.status}`); return await res.json();
-    } catch(err) { console.error('🔍 API ERROR:', err); showToast('Gagal terhubung ke server.', 'error'); return {status:'error', message:'Connection Failed'}; }
-    finally { showLoading(false); }
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // Batas 15 detik
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action, ...payload }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    } catch (err) {
+        console.error('🔍 API ERROR:', err);
+        if (err.name === 'AbortError') showToast('Koneksi timeout. Periksa internet Anda.', 'error');
+        else showToast('Gagal terhubung ke server.', 'error');
+        return { status: 'error', message: err.message };
+    } finally {
+        hideLoading();
+    }
 }
 
 function setupAutoLogout() {
     ['click','keydown','mousemove','scroll','touchstart'].forEach(evt => document.addEventListener(evt, resetActivityTimer, true));
     resetActivityTimer();
     if(sessionCheckTimer) clearInterval(sessionCheckTimer);
-    sessionCheckTimer = setInterval(checkMySession, 20000); // Cek paksa logout setiap 20 detik
+    sessionCheckTimer = setInterval(checkMySession, 20000);
 }
 function resetActivityTimer() { clearTimeout(inactivityTimer); inactivityTimer = setTimeout(() => { if(currentUser){ showToast('Sesi berakhir karena tidak aktif 10 menit.', 'warning'); handleLogout(); } }, SESSION_TIMEOUT); }
 
@@ -59,7 +103,6 @@ function showApp() {
     setupAutoLogout(); window.navigateTo('dashboard');
 }
 
-// ✅ CEK PAKSA LOGOUT DARI ADMIN
 async function checkMySession() {
     if(!currentUser) return;
     const res = await api('checkMySession', {username: currentUser.username});
@@ -87,7 +130,6 @@ async function loadAgenda() {
     if(res.status==='success'){ allAgenda=res.data||[]; normalizeStatus(); renderAgendaTable(); loadDashboard(); } return res;
 }
 
-// ✅ PERBAIKAN PAYLOAD AGENDA (LENGKAP & TIDAK HILANG)
 async function handleAgendaSubmit(e) {
     e.preventDefault(); 
     const id=document.getElementById('agendaId').value; 
@@ -109,9 +151,33 @@ async function handleAgendaSubmit(e) {
     if(res.status==='success'){showToast(res.message,'success');closeAgendaModal();if(!id&&wantWA&&res.data?.id)sendWhatsAppDirect({...p,id:res.data.id});await loadAgenda();}
 }
 
-function openWhatsApp(msg) { let ph=localStorage.getItem('waNumber')||''; ph=ph.replace(/\D/g,''); if(!ph.startsWith('62'))ph='62'+ph.replace(/^0/,''); if(ph.length<10) return showToast('Atur nomor WA di Pengaturan dulu', 'warning'); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`,'_blank'); }
+// ✅ FIX WA ICON `?` DI DEVICE LAMA: Encoding bersih + Fallback popup
+function openWhatsApp(msg) {
+    let ph = localStorage.getItem('waNumber') || '';
+    ph = ph.replace(/\D/g, '');
+    if (!ph.startsWith('62')) ph = '62' + ph.replace(/^0/, '');
+    if (ph.length < 10) return showToast('Atur nomor WA di Pengaturan dulu', 'warning');
 
-// ✅ FORMAT WA PERSIS SEPERTI PERMINTAAN
+    // Bersihkan karakter kontrol & pastikan line break standar
+    const cleanMsg = msg.replace(/[\r\x00-\x1F\x7F-\x9F]/g, '').replace(/\n/g, '\n');
+    const encoded = encodeURIComponent(cleanMsg);
+    const url = `https://wa.me/${ph}?text=${encoded}`;
+
+    try {
+        const win = window.open(url, '_blank');
+        // Deteksi jika popup diblokir atau gagal
+        if (!win || win.closed || typeof win.closed === 'undefined') {
+            showToast('Popup diblokir. Izinkan popup untuk WhatsApp, atau klik ikon WA lagi.', 'warning');
+            // Fallback: buka di tab yang sama
+            window.location.href = url;
+        }
+    } catch (e) {
+        console.error('WA Open Error:', e);
+        // Fallback aman
+        window.location.href = url;
+    }
+}
+
 window.sendWhatsAppDirect = function(a) {
     let msg = `🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -138,7 +204,6 @@ window.sendWhatsAppDirect = function(a) {
 window.sendWhatsAppById = function(id) { const a=allAgenda.find(x=>String(x.id)===String(id)); if(!a){showToast('Memuat data terbaru...','info');loadAgenda().then(()=>{const r=allAgenda.find(x=>String(x.id)===String(id));r?sendWhatsAppDirect(r):showToast('Data tidak ditemukan.','error');});return;} sendWhatsAppDirect(a); }
 window.sendWhatsApp = window.sendWhatsAppDirect;
 
-// ✅ KIRIM HARI INI (FORMAT SERAGAM)
 window.sendDailyAgenda = function() {
     const td = new Date().toISOString().split('T')[0];
     const daily = allAgenda.filter(a => a.tanggal === td && a.status !== 'selesai').sort((a,b)=>(a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
@@ -156,7 +221,6 @@ window.sendDailyAgenda = function() {
     openWhatsApp(msg);
 }
 
-// ✅ KIRIM TERPILIH (BULK) - DIPERBAIKI TOTAL
 window.sendSelectedAgendas = function() {
     const checked = document.querySelectorAll('.agenda-check:checked');
     if(checked.length === 0) return showToast('Pilih minimal 1 agenda untuk dikirim.', 'warning');
@@ -197,7 +261,6 @@ function closeAgendaModal(){document.getElementById('agendaModal').classList.rem
 window.editAgenda=function(id){openAgendaModal(id);};
 window.deleteAgenda=async function(id){if(!confirm('Hapus agenda ini?'))return;const res=await api('deleteAgenda',{id});if(res.status==='success'){showToast(res.message,'success');loadAgenda();}};
 
-// ✅ USER MANAGEMENT + FORCE LOGOUT
 async function loadUsers(){ const res = await api('getUsers'); if(res.status === 'success') renderUsersTableCompact(res.data); }
 function renderUsersTableCompact(users){
     const tbody = document.querySelector('#usersTableCompact tbody'); if(!tbody) return; tbody.innerHTML = '';
@@ -263,12 +326,11 @@ async function exportAgenda(fmt){const res=await api('exportAgenda',{username:cu
 function loadSettings(){document.getElementById('waNumber').value=localStorage.getItem('waNumber')||'';}
 function saveWaNumber(){let n=document.getElementById('waNumber').value.replace(/\D/g,'');if(!n.startsWith('62'))n='62'+n.replace(/^0/,'');localStorage.setItem('waNumber',n);showToast('Nomor WA disimpan','success');}
 
-function showLoading(s){document.getElementById('loading').style.display=s?'flex':'none';}
 function showToast(msg,type='info'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),4000);}
 function updateClock(){const n=new Date();const o={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};const e=document.getElementById('currentDateTime');if(e)e.textContent=n.toLocaleDateString('id-ID',o);}
 function formatDate(ds){if(!ds)return'-';if(ds instanceof Date){const d=ds.getDate(),m=ds.getMonth(),y=ds.getFullYear();const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${d} ${mo[m]} ${y}`;}const p=String(ds).trim().split(/[-T]/);if(p.length>=3){const[y,m,d]=p;const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${parseInt(d,10)} ${mo[parseInt(m,10)-1]} ${y}`;}return String(ds);}
 
-// ✅ GLOBAL EXPORT (SEMUA TOMBOL BERFUNGSI)
+// ✅ GLOBAL EXPORT LENGKAP
 window.navigateTo=window.navigateTo||navigateTo;
 window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect;
 window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById;
