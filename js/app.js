@@ -3,7 +3,7 @@ let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = 
 let inactivityTimer, sessionCheckTimer;
 const SESSION_TIMEOUT = 10 * 60 * 1000;
 
-// ✅ SISTEM LOADING COUNTER + TIMEOUT
+// ✅ SISTEM LOADING COUNTER + TIMEOUT (DIPERBAIKI)
 let loadingCounter = 0;
 let loadingTimeout;
 
@@ -16,9 +16,13 @@ function showLoading() {
 }
 
 function hideLoading() {
-    loadingCounter--;
+    if (loadingCounter > 0) loadingCounter--;
     clearTimeout(loadingTimeout);
-    if (loadingCounter <= 0) { loadingCounter = 0; const el = document.getElementById('loading'); if (el) el.style.display = 'none'; }
+    if (loadingCounter <= 0) {
+        loadingCounter = 0;
+        const el = document.getElementById('loading');
+        if (el) el.style.display = 'none';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => { checkLogin(); setupEvents(); updateClock(); setInterval(updateClock, 1000); });
@@ -39,9 +43,9 @@ function setupEvents() {
     document.getElementById('selectAllAgenda')?.addEventListener('change', e => { document.querySelectorAll('.agenda-check').forEach(cb => cb.checked = e.target.checked); });
 }
 
-// ✅ API DENGAN ABORTCONTROLLER & TIMEOUT
-async function api(action, payload={}) {
-    resetActivityTimer(); showLoading();
+// ✅ API DENGAN SKIP LOADING UNTUK BACKGROUND PROCESS
+async function api(action, payload = {}, options = {}) {
+    if (!options.skipLoading) showLoading();
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -54,7 +58,9 @@ async function api(action, payload={}) {
         if(err.name==='AbortError') showToast('Koneksi timeout. Periksa internet Anda.', 'error');
         else showToast('Gagal terhubung ke server.', 'error');
         return {status:'error', message: err.message};
-    } finally { hideLoading(); }
+    } finally {
+        if (!options.skipLoading) hideLoading();
+    }
 }
 
 function setupAutoLogout() {
@@ -86,9 +92,10 @@ function showApp() {
     setupAutoLogout(); window.navigateTo('dashboard');
 }
 
+// ✅ CEK SESI TANPA MENUNJUKKAN LOADING
 async function checkMySession() {
     if(!currentUser) return;
-    const res = await api('checkMySession', {username: currentUser.username});
+    const res = await api('checkMySession', {username: currentUser.username}, { skipLoading: true });
     if(res.status==='success' && res.data?.force_logout) {
         showToast('⚠️ Sesi Anda telah diakhiri oleh Admin.', 'warning');
         setTimeout(() => handleLogout(), 1500);
@@ -134,9 +141,8 @@ async function handleAgendaSubmit(e) {
     if(res.status==='success'){showToast(res.message,'success');closeAgendaModal();if(!id&&wantWA&&res.data?.id)sendWhatsAppDirect({...p,id:res.data.id});await loadAgenda();}
 }
 
-// ✅ FUNGSI BUILDER PESAN WHATSAPP (TERSTRUKTUR & AMAN)
+// ✅ FUNGSI BUILDER PESAN WHATSAPP SINGLE (LENGKAP)
 function buildSingleMessage(a) {
-    // Menggunakan string concatenation agar lebih aman dari error encoding template literal
     let msg = "🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n";
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
     msg += "📋 *AGENDA KEGIATAN PIMPINAN*\n\n";
@@ -151,12 +157,13 @@ function buildSingleMessage(a) {
     msg += "🏅 *Pejabat:* " + (a.pejabat || '-') + "\n\n";
     msg += "📌 *Keterangan:* " + (a.keterangan || '-') + "\n";
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
-    msg += "👤 *Input oleh:* " + (a.dibuat_oleh || currentUser.username) + "\n";
+    msg += "👤 *Input oleh:* " + ((currentUser && currentUser.username) || 'Admin') + "\n";
     msg += "_Mohon kehadiran tepat waktu._\n";
     msg += "_Terima kasih._";
     return msg;
 }
 
+// ✅ FUNGSI BUILDER PESAN WHATSAPP BULK (DETAIL LENGKAP)
 function buildBulkMessage(list) {
     let msg = "🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n";
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
@@ -164,14 +171,19 @@ function buildBulkMessage(list) {
     
     list.forEach((a, i) => {
         msg += "*" + (i + 1) + ". " + (a.kegiatan || 'Kegiatan') + "*\n";
-        msg += "📅 " + formatDate(a.tanggal) + " | ⏰ " + (a.waktu_mulai || '-') + " - " + (a.waktu_selesai || '-') + "\n";
+        msg += "📅 " + formatDate(a.tanggal) + "\n";
+        msg += "⏰ " + (a.waktu_mulai || '-') + " - " + (a.waktu_selesai || '-') + "\n";
         msg += "📍 " + (a.tempat || '-') + "\n";
-        if (a.penanggung_jawab) msg += "👤 *PJ:* " + a.penanggung_jawab + "\n";
-        if (a.pakaian) msg += "👔 *Pakaian:* " + a.pakaian + "\n";
+        // Tampilkan hanya jika ada isinya (hindari string kosong)
+        if (a.penanggung_jawab && a.penanggung_jawab.trim()) msg += "👤 *PJ:* " + a.penanggung_jawab + "\n";
+        if (a.pakaian && a.pakaian.trim()) msg += "👔 *Pakaian:* " + a.pakaian + "\n";
+        if (a.petugas && a.petugas.trim()) msg += "👥 *Petugas:* " + a.petugas + "\n";
+        if (a.pejabat && a.pejabat.trim()) msg += "🏅 *Pejabat:* " + a.pejabat + "\n";
+        if (a.keterangan && a.keterangan.trim()) msg += "📌 *Ket:* " + a.keterangan + "\n";
         msg += "──────────────────────\n";
     });
     
-    msg += "👤 *Input oleh:* " + currentUser.username + "\n";
+    msg += "👤 *Input oleh:* " + ((currentUser && currentUser.username) || 'Admin') + "\n";
     msg += "_Mohon kehadiran tepat waktu._\n";
     msg += "_Terima kasih._";
     return msg;
@@ -184,14 +196,12 @@ function openWhatsApp(msg) {
     if (!ph.startsWith('62')) ph = '62' + ph.replace(/^0/, '');
     if (ph.length < 10) return showToast('Atur nomor WA di Pengaturan dulu', 'warning');
 
-    // Encode string agar URL valid. \n akan otomatis jadi %0A
     try {
         const encoded = encodeURIComponent(msg);
         const url = "https://wa.me/" + ph + "?text=" + encoded;
-        
         const win = window.open(url, '_blank');
         if (!win || win.closed || typeof win.closed === 'undefined') {
-            window.location.href = url; // Fallback jika popup diblokir
+            window.location.href = url;
         }
     } catch (e) {
         console.error("WA Error", e);
@@ -216,7 +226,6 @@ window.sendDailyAgenda = function() {
     const daily = allAgenda.filter(a => a.tanggal === td && a.status !== 'selesai').sort((a,b)=>(a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
     if(daily.length===0) return showToast('Tidak ada agenda aktif hari ini', 'info');
     if(!confirm(`Kirim ${daily.length} agenda hari ini ke WhatsApp?`)) return;
-    
     const msg = buildBulkMessage(daily);
     openWhatsApp(msg);
 }
@@ -230,7 +239,6 @@ window.sendSelectedAgendas = function() {
         .sort((a,b) => (a.tanggal||'').localeCompare(b.tanggal||'') || (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
 
     if(!confirm(`Kirim ${sel.length} agenda sekaligus ke WhatsApp?\n(Pastikan data sudah lengkap)`)) return;
-
     const msg = buildBulkMessage(sel);
     openWhatsApp(msg);
 }
@@ -249,14 +257,12 @@ async function loadUsers(){ const res = await api('getUsers'); if(res.status ===
 function renderUsersTableCompact(users){
     const tbody = document.querySelector('#usersTableCompact tbody'); if(!tbody) return; tbody.innerHTML = '';
     if(!users.length){ tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 30px;"><i class="fas fa-users fa-2x mb-2"></i><br>Tidak ada user</td></tr>'; return; }
-    
     users.forEach((u, index) => {
         const rc = (u.role || 'user').toString().trim().toLowerCase();
         const roleClass = rc === 'admin' ? 'role-admin' : 'role-user';
         const roleLabel = rc === 'admin' ? 'Admin' : 'User';
         const roleIcon = rc === 'admin' ? 'fas fa-shield-alt' : 'fas fa-user';
         const isForced = u.force_logout;
-        
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${index + 1}</td>
