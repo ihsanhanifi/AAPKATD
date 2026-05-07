@@ -1,8 +1,8 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbxsMinDFpWXajV5PEJY-BGbF6z0DywgzFr2Jws7f_Co1W-5SqMhkFHGXXksqTcIt9IQOw/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
-let idleTimer, warningTimer; // Timer untuk Auto-Logout
-const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 Menit
-const WARNING_TIME = 1 * 60 * 1000; // 1 Menit sebelum logout (Peringatan)
+let idleTimer, warningTimer;
+const SESSION_TIMEOUT = 10 * 60 * 1000;
+const WARNING_TIME = 1 * 60 * 1000;
 
 let loadingCounter = 0;
 let loadingTimeout;
@@ -42,7 +42,6 @@ function setupEvents() {
     document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('active'); }));
     document.getElementById('selectAllAgenda')?.addEventListener('change', e => { document.querySelectorAll('.agenda-check').forEach(cb => cb.checked = e.target.checked); });
     
-    // Toggle WA Mode UI
     const waMode = document.getElementById('waMode');
     const waNumInput = document.getElementById('waNumberInput');
     if(waMode && waNumInput) {
@@ -68,48 +67,54 @@ async function api(action, payload = {}, options = {}) {
     }
 }
 
-// ✅ SISTEM AUTO-LOGOUT 10 MENIT (IDLE TIMER)
 function setupAutoLogout() {
-    // Event yang me-reset timer saat ada aktivitas
     const events = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'keypress'];
     events.forEach(evt => document.addEventListener(evt, resetActivityTimer, true));
-    resetActivityTimer(); // Mulai timer pertama kali
+    resetActivityTimer();
 }
 
 function resetActivityTimer() {
     clearTimeout(idleTimer);
     clearTimeout(warningTimer);
-    
-    // Timer Peringatan (1 Menit Sebelum Logout)
     warningTimer = setTimeout(() => {
         showToast('⚠️ <b>Peringatan:</b> Sesi akan berakhir dalam 1 menit karena tidak aktif!', 'warning', 6000);
     }, SESSION_TIMEOUT - WARNING_TIME);
 
-    // Timer Logout (10 Menit)
     idleTimer = setTimeout(() => {
         showToast('Sesi berakhir karena tidak aktif.', 'error');
         handleLogout();
     }, SESSION_TIMEOUT);
 }
 
-function checkLogin() { const s=localStorage.getItem('agendaUser'); if(s){currentUser=JSON.parse(s); showApp();} }
+function checkLogin() { 
+    // ✅ KEAMANAN: Menggunakan sessionStorage (Hilang saat browser ditutup)
+    const s = sessionStorage.getItem('agendaUser'); 
+    if(s){currentUser=JSON.parse(s); showApp();} 
+}
+
 async function handleLogin(e) {
     e.preventDefault(); const btn=document.getElementById('loginBtn'), errDiv=document.getElementById('loginError'); btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memuat...'; errDiv.textContent='';
     const res = await api('login', {username:document.getElementById('loginUsername').value, password:document.getElementById('loginPassword').value});
     btn.disabled=false; btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Masuk';
-    if(res.status==='success'){currentUser=res.data; localStorage.setItem('agendaUser',JSON.stringify(currentUser)); showApp();} else {errDiv.textContent=res.message;}
+    if(res.status==='success'){
+        currentUser=res.data; 
+        // ✅ KEAMANAN: Menggunakan sessionStorage
+        sessionStorage.setItem('agendaUser', JSON.stringify(currentUser)); 
+        showApp();
+    } else {errDiv.textContent=res.message;}
 }
+
 function handleLogout() { 
-    // Hapus semua timer saat logout manual
     clearTimeout(idleTimer);
     clearTimeout(warningTimer);
-    
-    localStorage.removeItem('agendaUser'); 
+    // ✅ KEAMANAN: Menghapus session dari storage
+    sessionStorage.removeItem('agendaUser'); 
     currentUser = null; 
     document.getElementById('loginPage').style.display='flex'; 
     document.getElementById('appPage').style.display='none'; 
     document.getElementById('loginForm')?.reset(); 
 }
+
 function showApp() {
     document.getElementById('loginPage').style.display='none'; 
     document.getElementById('appPage').style.display='flex';
@@ -117,8 +122,6 @@ function showApp() {
     document.getElementById('userName').textContent=currentUser.nama_lengkap; 
     document.getElementById('userRole').textContent=currentUser.jabatan;
     document.querySelectorAll('.admin-only').forEach(el=>el.style.display=currentUser.role==='admin'?'flex':'none');
-    
-    // Jalankan sistem auto-logout untuk Admin maupun User
     setupAutoLogout(); 
     window.navigateTo('dashboard');
     loadSettings(); 
@@ -338,6 +341,7 @@ async function confirmImport(){if(!importData)return;const res=await api('import
 async function exportAgenda(fmt){const res=await api('exportAgenda',{username:currentUser.username,role:currentUser.role});if(res.status!=='success')return;let c,t,ex;if(fmt==='json'){c=JSON.stringify(res.data,null,2);t='application/json';ex='json';}else if(fmt==='csv'){const h=Object.keys(res.data[0]||{});c=[h.join(','),...res.data.map(r=>h.map(k=>`"${String(r[k]||'').replace(/"/g,'""')}"`).join(','))].join('\n');t='text/csv';ex='csv';}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type}));a.download=`agenda_${new Date().toISOString().split('T')[0]}.${ex}`;a.click();showToast('Export berhasil','success');}
 
 function loadSettings(){
+    // Pengaturan nomor WA tetap di localStorage agar user tidak perlu input ulang setiap kali buka
     document.getElementById('waMode').value = localStorage.getItem('waMode') || 'contact';
     document.getElementById('waNumbers').value = localStorage.getItem('waNumbers') || '';
     document.getElementById('waNumberInput').style.display = document.getElementById('waMode').value === 'number' ? 'block' : 'none';
