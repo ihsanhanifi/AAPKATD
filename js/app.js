@@ -1,7 +1,8 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbxsMinDFpWXajV5PEJY-BGbF6z0DywgzFr2Jws7f_Co1W-5SqMhkFHGXXksqTcIt9IQOw/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
-let inactivityTimer, sessionCheckTimer;
-const SESSION_TIMEOUT = 10 * 60 * 1000;
+let idleTimer, warningTimer; // Timer untuk Auto-Logout
+const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 Menit
+const WARNING_TIME = 1 * 60 * 1000; // 1 Menit sebelum logout (Peringatan)
 
 let loadingCounter = 0;
 let loadingTimeout;
@@ -67,13 +68,29 @@ async function api(action, payload = {}, options = {}) {
     }
 }
 
+// ✅ SISTEM AUTO-LOGOUT 10 MENIT (IDLE TIMER)
 function setupAutoLogout() {
-    ['click','keydown','mousemove','scroll','touchstart'].forEach(evt => document.addEventListener(evt, resetActivityTimer, true));
-    resetActivityTimer();
-    if(sessionCheckTimer) clearInterval(sessionCheckTimer);
-    sessionCheckTimer = setInterval(checkMySession, 20000);
+    // Event yang me-reset timer saat ada aktivitas
+    const events = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'keypress'];
+    events.forEach(evt => document.addEventListener(evt, resetActivityTimer, true));
+    resetActivityTimer(); // Mulai timer pertama kali
 }
-function resetActivityTimer() { clearTimeout(inactivityTimer); inactivityTimer = setTimeout(() => { if(currentUser){ showToast('Sesi berakhir karena tidak aktif 10 menit.', 'warning'); handleLogout(); } }, SESSION_TIMEOUT); }
+
+function resetActivityTimer() {
+    clearTimeout(idleTimer);
+    clearTimeout(warningTimer);
+    
+    // Timer Peringatan (1 Menit Sebelum Logout)
+    warningTimer = setTimeout(() => {
+        showToast('⚠️ <b>Peringatan:</b> Sesi akan berakhir dalam 1 menit karena tidak aktif!', 'warning', 6000);
+    }, SESSION_TIMEOUT - WARNING_TIME);
+
+    // Timer Logout (10 Menit)
+    idleTimer = setTimeout(() => {
+        showToast('Sesi berakhir karena tidak aktif.', 'error');
+        handleLogout();
+    }, SESSION_TIMEOUT);
+}
 
 function checkLogin() { const s=localStorage.getItem('agendaUser'); if(s){currentUser=JSON.parse(s); showApp();} }
 async function handleLogin(e) {
@@ -83,18 +100,28 @@ async function handleLogin(e) {
     if(res.status==='success'){currentUser=res.data; localStorage.setItem('agendaUser',JSON.stringify(currentUser)); showApp();} else {errDiv.textContent=res.message;}
 }
 function handleLogout() { 
-    clearTimeout(inactivityTimer); if(sessionCheckTimer) clearInterval(sessionCheckTimer);
-    localStorage.removeItem('agendaUser'); currentUser=null; 
-    document.getElementById('loginPage').style.display='flex'; document.getElementById('appPage').style.display='none'; 
+    // Hapus semua timer saat logout manual
+    clearTimeout(idleTimer);
+    clearTimeout(warningTimer);
+    
+    localStorage.removeItem('agendaUser'); 
+    currentUser = null; 
+    document.getElementById('loginPage').style.display='flex'; 
+    document.getElementById('appPage').style.display='none'; 
     document.getElementById('loginForm')?.reset(); 
 }
 function showApp() {
-    document.getElementById('loginPage').style.display='none'; document.getElementById('appPage').style.display='flex';
+    document.getElementById('loginPage').style.display='none'; 
+    document.getElementById('appPage').style.display='flex';
     document.getElementById('userAvatar').textContent=currentUser.nama_lengkap.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
-    document.getElementById('userName').textContent=currentUser.nama_lengkap; document.getElementById('userRole').textContent=currentUser.jabatan;
+    document.getElementById('userName').textContent=currentUser.nama_lengkap; 
+    document.getElementById('userRole').textContent=currentUser.jabatan;
     document.querySelectorAll('.admin-only').forEach(el=>el.style.display=currentUser.role==='admin'?'flex':'none');
-    setupAutoLogout(); window.navigateTo('dashboard');
-    loadSettings(); // Load WA settings on app start
+    
+    // Jalankan sistem auto-logout untuk Admin maupun User
+    setupAutoLogout(); 
+    window.navigateTo('dashboard');
+    loadSettings(); 
 }
 
 async function checkMySession() {
@@ -145,7 +172,6 @@ async function handleAgendaSubmit(e) {
     if(res.status==='success'){showToast(res.message,'success');closeAgendaModal();if(!id&&wantWA&&res.data?.id)sendWhatsAppDirect({...p,id:res.data.id});await loadAgenda();}
 }
 
-// ✅ FUNGSI BUILDER PESAN (LABEL EKSLISIT)
 function buildSingleMessage(a) {
     let msg = "🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n";
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
@@ -190,19 +216,16 @@ function buildBulkMessage(list) {
     return msg;
 }
 
-// ✅ ✅ FUNGSI KIRIM WHATSAPP CERDAS (GRUP / BANYAK NOMOR)
 function sendWhatsAppMessage(msg) {
     const mode = localStorage.getItem('waMode') || 'contact';
     const encoded = encodeURIComponent(msg);
     
     if (mode === 'contact') {
-        // Mode Grup/Kontak: Buka WhatsApp picker, user pilih grup sendiri
         window.open(`https://wa.me/?text=${encoded}`, '_blank');
         showToast('Pilih <b>Grup</b> atau <b>Kontak</b> di WhatsApp yang terbuka.', 'info', 5000);
         return;
     }
 
-    // Mode Nomor Spesifik
     const raw = localStorage.getItem('waNumbers') || '';
     const numbers = raw.split(/[\n,]+/).map(n => n.trim().replace(/\D/g, '')).filter(n => n.startsWith('62') && n.length >= 10);
     
@@ -214,9 +237,7 @@ function sendWhatsAppMessage(msg) {
     if (numbers.length === 1) {
         window.open(`https://wa.me/${numbers[0]}?text=${encoded}`, '_blank');
     } else {
-        // Buka nomor pertama, sisanya tampilkan link agar tidak diblokir popup browser
         window.open(`https://wa.me/${numbers[0]}?text=${encoded}`, '_blank');
-        
         let linksHtml = `<strong>📲 Klik untuk kirim ke nomor lain:</strong><br>`;
         numbers.slice(1).forEach((num) => {
             linksHtml += `<a href="https://wa.me/${num}?text=${encoded}" target="_blank" style="color:white;text-decoration:underline;display:block;margin:5px 0;font-size:0.9rem;">👉 ${num}</a>`;
@@ -329,7 +350,7 @@ function saveWaSettings(){
 
 function showToast(msg, type='info', duration=4000){
     const t=document.getElementById('toast');
-    t.innerHTML = msg; // Support HTML for multi-number links
+    t.innerHTML = msg;
     t.className=`toast ${type} show`;
     setTimeout(()=>t.classList.remove('show'), duration);
 }
