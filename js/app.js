@@ -40,6 +40,13 @@ function setupEvents() {
     const importFile = document.getElementById('importFile'); if(importFile) importFile.addEventListener('change', handleImportFile);
     document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('active'); }));
     document.getElementById('selectAllAgenda')?.addEventListener('change', e => { document.querySelectorAll('.agenda-check').forEach(cb => cb.checked = e.target.checked); });
+    
+    // Toggle WA Mode UI
+    const waMode = document.getElementById('waMode');
+    const waNumInput = document.getElementById('waNumberInput');
+    if(waMode && waNumInput) {
+        waMode.addEventListener('change', () => { waNumInput.style.display = waMode.value === 'number' ? 'block' : 'none'; });
+    }
 }
 
 async function api(action, payload = {}, options = {}) {
@@ -87,6 +94,7 @@ function showApp() {
     document.getElementById('userName').textContent=currentUser.nama_lengkap; document.getElementById('userRole').textContent=currentUser.jabatan;
     document.querySelectorAll('.admin-only').forEach(el=>el.style.display=currentUser.role==='admin'?'flex':'none');
     setupAutoLogout(); window.navigateTo('dashboard');
+    loadSettings(); // Load WA settings on app start
 }
 
 async function checkMySession() {
@@ -137,7 +145,7 @@ async function handleAgendaSubmit(e) {
     if(res.status==='success'){showToast(res.message,'success');closeAgendaModal();if(!id&&wantWA&&res.data?.id)sendWhatsAppDirect({...p,id:res.data.id});await loadAgenda();}
 }
 
-// ✅ FUNGSI BUILDER PESAN (STRING EKSLISIT + LABEL PASTI MUNCUL)
+// ✅ FUNGSI BUILDER PESAN (LABEL EKSLISIT)
 function buildSingleMessage(a) {
     let msg = "🏛️ *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n";
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
@@ -182,39 +190,42 @@ function buildBulkMessage(list) {
     return msg;
 }
 
-// ✅ FITUR KIRIM KE BANYAK NOMOR
-function getWaNumbers() {
-    let raw = localStorage.getItem('waNumbers') || '';
-    return raw.split(/[\n,]+/).map(n => n.trim().replace(/\D/g, '')).filter(n => n.startsWith('62') && n.length >= 10);
-}
-
-function openWhatsAppMulti(msg) {
-    const numbers = getWaNumbers();
-    if(numbers.length === 0) return showToast('Atur nomor WA di Pengaturan dulu', 'warning');
-    if(numbers.length > 1) {
-        if(!confirm(`Akan membuka WhatsApp untuk ${numbers.length} nomor secara berurutan.\nIzinkan popup jika diminta browser.`)) return;
-    }
+// ✅ ✅ FUNGSI KIRIM WHATSAPP CERDAS (GRUP / BANYAK NOMOR)
+function sendWhatsAppMessage(msg) {
+    const mode = localStorage.getItem('waMode') || 'contact';
+    const encoded = encodeURIComponent(msg);
     
-    let delay = 0;
-    numbers.forEach((num, idx) => {
-        setTimeout(() => {
-            try {
-                const url = "https://wa.me/" + num + "?text=" + encodeURIComponent(msg);
-                window.open(url, '_blank');
-            } catch(e) {
-                showToast("Gagal membuka WhatsApp. Periksa pengaturan popup browser.", "error");
-            }
-        }, delay);
-        delay += 1200;
-    });
-    showToast("Membuka WhatsApp untuk " + numbers.length + " nomor...", "info");
+    if (mode === 'contact') {
+        // Mode Grup/Kontak: Buka WhatsApp picker, user pilih grup sendiri
+        window.open(`https://wa.me/?text=${encoded}`, '_blank');
+        showToast('Pilih <b>Grup</b> atau <b>Kontak</b> di WhatsApp yang terbuka.', 'info', 5000);
+        return;
+    }
+
+    // Mode Nomor Spesifik
+    const raw = localStorage.getItem('waNumbers') || '';
+    const numbers = raw.split(/[\n,]+/).map(n => n.trim().replace(/\D/g, '')).filter(n => n.startsWith('62') && n.length >= 10);
+    
+    if (numbers.length === 0) {
+        showToast('Masukkan minimal 1 nomor di Pengaturan.', 'error');
+        return;
+    }
+
+    if (numbers.length === 1) {
+        window.open(`https://wa.me/${numbers[0]}?text=${encoded}`, '_blank');
+    } else {
+        // Buka nomor pertama, sisanya tampilkan link agar tidak diblokir popup browser
+        window.open(`https://wa.me/${numbers[0]}?text=${encoded}`, '_blank');
+        
+        let linksHtml = `<strong>📲 Klik untuk kirim ke nomor lain:</strong><br>`;
+        numbers.slice(1).forEach((num) => {
+            linksHtml += `<a href="https://wa.me/${num}?text=${encoded}" target="_blank" style="color:white;text-decoration:underline;display:block;margin:5px 0;font-size:0.9rem;">👉 ${num}</a>`;
+        });
+        showToast(linksHtml, 'info', 15000);
+    }
 }
 
-window.sendWhatsAppDirect = function(a) {
-    const msg = buildSingleMessage(a);
-    openWhatsAppMulti(msg);
-}
-
+window.sendWhatsAppDirect = function(a) { sendWhatsAppMessage(buildSingleMessage(a)); }
 window.sendWhatsAppById = function(id) { 
     const a=allAgenda.find(x=>String(x.id)===String(id)); 
     if(!a){showToast('Memuat data terbaru...','info');loadAgenda().then(()=>{const r=allAgenda.find(x=>String(x.id)===String(id));r?sendWhatsAppDirect(r):showToast('Data tidak ditemukan.','error');});return;} 
@@ -227,21 +238,16 @@ window.sendDailyAgenda = function() {
     const daily = allAgenda.filter(a => a.tanggal === td && a.status !== 'selesai').sort((a,b)=>(a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
     if(daily.length===0) return showToast('Tidak ada agenda aktif hari ini', 'info');
     if(!confirm(`Kirim ${daily.length} agenda hari ini ke WhatsApp?`)) return;
-    const msg = buildBulkMessage(daily);
-    openWhatsAppMulti(msg);
+    sendWhatsAppMessage(buildBulkMessage(daily));
 }
 
 window.sendSelectedAgendas = function() {
     const checked = document.querySelectorAll('.agenda-check:checked');
     if(checked.length === 0) return showToast('Pilih minimal 1 agenda untuk dikirim.', 'warning');
-
     const ids = Array.from(checked).map(c => c.value);
-    const sel = allAgenda.filter(a => ids.includes(a.id))
-        .sort((a,b) => (a.tanggal||'').localeCompare(b.tanggal||'') || (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
-
+    const sel = allAgenda.filter(a => ids.includes(a.id)).sort((a,b) => (a.tanggal||'').localeCompare(b.tanggal||'') || (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
     if(!confirm(`Kirim ${sel.length} agenda sekaligus ke WhatsApp?`)) return;
-    const msg = buildBulkMessage(sel);
-    openWhatsAppMulti(msg);
+    sendWhatsAppMessage(buildBulkMessage(sel));
 }
 
 function renderAgendaTable() {
@@ -311,17 +317,26 @@ async function confirmImport(){if(!importData)return;const res=await api('import
 async function exportAgenda(fmt){const res=await api('exportAgenda',{username:currentUser.username,role:currentUser.role});if(res.status!=='success')return;let c,t,ex;if(fmt==='json'){c=JSON.stringify(res.data,null,2);t='application/json';ex='json';}else if(fmt==='csv'){const h=Object.keys(res.data[0]||{});c=[h.join(','),...res.data.map(r=>h.map(k=>`"${String(r[k]||'').replace(/"/g,'""')}"`).join(','))].join('\n');t='text/csv';ex='csv';}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type}));a.download=`agenda_${new Date().toISOString().split('T')[0]}.${ex}`;a.click();showToast('Export berhasil','success');}
 
 function loadSettings(){
+    document.getElementById('waMode').value = localStorage.getItem('waMode') || 'contact';
     document.getElementById('waNumbers').value = localStorage.getItem('waNumbers') || '';
+    document.getElementById('waNumberInput').style.display = document.getElementById('waMode').value === 'number' ? 'block' : 'none';
 }
-function saveWaNumbers(){
+function saveWaSettings(){
+    localStorage.setItem('waMode', document.getElementById('waMode').value);
     localStorage.setItem('waNumbers', document.getElementById('waNumbers').value);
-    showToast('Nomor WhatsApp berhasil disimpan', 'success');
+    showToast('Pengaturan WhatsApp berhasil disimpan', 'success');
 }
 
-function showToast(msg,type='info'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),4000);}
+function showToast(msg, type='info', duration=4000){
+    const t=document.getElementById('toast');
+    t.innerHTML = msg; // Support HTML for multi-number links
+    t.className=`toast ${type} show`;
+    setTimeout(()=>t.classList.remove('show'), duration);
+}
 function updateClock(){const n=new Date();const o={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};const e=document.getElementById('currentDateTime');if(e)e.textContent=n.toLocaleDateString('id-ID',o);}
 function formatDate(ds){if(!ds)return'-';if(ds instanceof Date){const d=ds.getDate(),m=ds.getMonth(),y=ds.getFullYear();const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${d} ${mo[m]} ${y}`;}const p=String(ds).trim().split(/[-T]/);if(p.length>=3){const[y,m,d]=p;const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${parseInt(d,10)} ${mo[parseInt(m,10)-1]} ${y}`;}return String(ds);}
 
+// ✅ GLOBAL EXPORT LENGKAP
 window.navigateTo=window.navigateTo||navigateTo;
 window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect;
 window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById;
@@ -342,4 +357,4 @@ window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser;
 window.allowLoginUser=window.allowLoginUser||allowLoginUser;
 window.confirmImport=window.confirmImport||confirmImport;
 window.exportAgenda=window.exportAgenda||exportAgenda;
-window.saveWaNumbers=window.saveWaNumbers||saveWaNumbers;
+window.saveWaSettings=window.saveWaSettings||saveWaSettings;
