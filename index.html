@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
+    <link rel="icon" href="image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
     <title>Agenda Pimpinan - Kemenag Kab. Tanah Datar</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,9 +20,9 @@
                 <h2>Agenda Pimpinan</h2>
                 <p>Kementerian Agama Kabupaten Tanah Datar</p>
             </div>
-            <form id="loginForm">
-                <div class="form-group"><label><i class="fas fa-user"></i> Username</label><input type="text" id="loginUsername" required autocomplete="username"></div>
-                <div class="form-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="loginPassword" required autocomplete="current-password"></div>
+            <form id="loginForm" autocomplete="off">
+                <div class="form-group"><label><i class="fas fa-user"></i> Username</label><input type="text" id="loginUsername" autocomplete="off" required placeholder="Masukkan username"></div>
+                <div class="form-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="loginPassword" autocomplete="new-password" required placeholder="Masukkan password"></div>
                 <button type="submit" class="btn btn-primary btn-block" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Masuk</button>
                 <div id="loginError" class="error-msg"></div>
             </form>
@@ -39,9 +39,9 @@
                 <a href="#" class="nav-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                 <a href="#" class="nav-link" data-page="agenda"><i class="fas fa-calendar-alt"></i> Agenda</a>
                 <a href="#" class="nav-link" data-page="calendar"><i class="fas fa-calendar"></i> Kalender</a>
-                <a href="#" class="nav-link" data-page="importExport"><i class="fas fa-exchange-alt"></i> Import/Export</a>
+                <a href="#" class="nav-link write-access" data-page="importExport"><i class="fas fa-exchange-alt"></i> Import/Export</a>
                 <a href="#" class="nav-link admin-only" data-page="users"><i class="fas fa-users-cog"></i> Manajemen User</a>
-                <a href="#" class="nav-link" data-page="settings"><i class="fas fa-cog"></i> Pengaturan</a>
+                <a href="#" class="nav-link admin-only" data-page="settings"><i class="fas fa-cog"></i> Pengaturan</a>
             </nav>
             <div class="sidebar-footer">
                 <div class="user-info"><div class="user-avatar" id="userAvatar"></div><div><div class="user-name" id="userName"></div><div class="user-role" id="userRole"></div></div></div>
@@ -68,11 +68,11 @@
                         <div class="card-header">
                             <h3><i class="fas fa-clock"></i> <span id="upcomingTitle">Agenda Mendatang</span></h3>
                             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                                <button type="button" class="btn btn-sm btn-success" id="btnSendDaily"><i class="fas fa-paper-plane"></i> Kirim Hari Ini</button>
+                                <button type="button" class="btn btn-sm btn-success write-access" id="btnSendDaily"><i class="fas fa-paper-plane"></i> Kirim Hari Ini</button>
                                 <button type="button" class="btn btn-sm btn-primary" id="btnViewAllAgenda"><i class="fas fa-arrow-right"></i> Lihat Semua</button>
                             </div>
                         </div>
-                        <div class="card-body"><div class="table-responsive"><table class="table" id="upcomingTable"><thead><tr><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>PJ & Pakaian</th><th>Aksi</th></tr></thead><tbody></tbody></table></div></div>
+                        <div class="card-body"><div class="table-responsive"><table class="table" id="upcomingTable"><thead><tr><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>PJ & Pakaian</th><th class="write-access">Aksi</th></tr></thead><tbody></tbody></table></div></div>
                     </div>
                 </div>
 
@@ -83,11 +83,11 @@
                             <button class="btn btn-primary" onclick="loadAgenda()"><i class="fas fa-search"></i> Filter</button>
                         </div>
                         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                            <button class="btn btn-success" onclick="sendSelectedAgendas()"><i class="fas fa-paper-plane"></i> Kirim Terpilih</button>
-                            <button class="btn btn-success" onclick="openAgendaModal()"><i class="fas fa-plus"></i> Tambah Agenda</button>
+                            <button class="btn btn-success write-access" onclick="sendSelectedAgendas()"><i class="fas fa-paper-plane"></i> Kirim Terpilih</button>
+                            <button class="btn btn-success write-access" onclick="openAgendaModal()"><i class="fas fa-plus"></i> Tambah Agenda</button>
                         </div>
                     </div>
-                    <div class="card"><div class="card-body"><div class="table-responsive"><table class="table" id="agendaTable"><thead><tr><th><input type="checkbox" id="selectAllAgenda"></th><th>No</th><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>Dibuat Oleh</th><th>Status</th><th>Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
+                    <div class="card"><div class="card-body"><div class="table-responsive"><table class="table" id="agendaTable"><thead><tr><th><input type="checkbox" id="selectAllAgenda" class="write-access"></th><th>No</th><th>Tanggal</th><th>Waktu</th><th>Kegiatan</th><th>Tempat</th><th>Dibuat Oleh</th><th>Status</th><th class="write-access">Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
                 </div>
 
                 <div id="page-calendar" class="page">
@@ -96,9 +96,19 @@
                 </div>
 
                 <div id="page-importExport" class="page">
-                    <div class="row">
-                        <div class="col-md-6"><div class="card"><div class="card-header"><h3><i class="fas fa-file-import"></i> Import Agenda</h3></div><div class="card-body"><p>Import data dari file JSON</p><div class="upload-area" id="uploadArea"><i class="fas fa-cloud-upload-alt fa-3x"></i><p>Drag & drop atau</p><label class="btn btn-primary"><i class="fas fa-folder-open"></i> Pilih File<input type="file" id="importFile" accept=".json" hidden></label></div><div id="importPreview" style="display:none;"><h4>Preview Data</h4><div id="importPreviewContent"></div><button class="btn btn-success" onclick="confirmImport()"><i class="fas fa-check"></i> Konfirmasi</button></div></div></div></div>
-                        <div class="col-md-6"><div class="card"><div class="card-header"><h3><i class="fas fa-file-export"></i> Export Agenda</h3></div><div class="card-body"><p>Export semua data agenda</p><div class="btn-group-vertical btn-block"><button class="btn btn-primary" onclick="exportAgenda('json')"><i class="fas fa-file-code"></i> JSON</button><button class="btn btn-success" onclick="exportAgenda('csv')"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-info" onclick="exportAgenda('excel')"><i class="fas fa-file-excel"></i> Excel</button></div></div></div></div>
+                    <div class="card">
+                        <div class="card-header"><h3><i class="fas fa-print"></i> Cetak Laporan Harian</h3></div>
+                        <div class="card-body">
+                            <p style="margin-bottom:15px;">Pilih tanggal untuk mencetak rekap agenda lengkap (PDF/Print) untuk Pimpinan.</p>
+                            <div class="form-row" style="align-items: flex-end;">
+                                <div class="form-group" style="flex: 1;"><label>Tanggal Agenda</label><input type="date" id="reportDate" class="form-control"></div>
+                                <div class="form-group" style="flex: 1;"><button class="btn btn-primary btn-block" onclick="generateDailyReport()"><i class="fas fa-file-pdf"></i> Cetak / Export PDF</button></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top: 20px;">
+                        <div class="col-md-6"><div class="card"><div class="card-header"><h3><i class="fas fa-file-import"></i> Import Backup (JSON)</h3></div><div class="card-body"><p>Pulihkan data dari file backup.</p><div class="upload-area" id="uploadArea"><i class="fas fa-cloud-upload-alt fa-3x"></i><p>Drag & drop file JSON atau</p><label class="btn btn-primary"><i class="fas fa-folder-open"></i> Pilih File<input type="file" id="importFile" accept=".json" hidden></label></div><div id="importPreview" style="display:none;"><h4>Preview Data</h4><div id="importPreviewContent"></div><button class="btn btn-success" onclick="confirmImport()"><i class="fas fa-check"></i> Konfirmasi Import</button></div></div></div></div>
+                        <div class="col-md-6"><div class="card"><div class="card-header"><h3><i class="fas fa-file-export"></i> Export Backup (JSON/CSV)</h3></div><div class="card-body"><p>Unduh semua data agenda.</p><div class="btn-group-vertical btn-block"><button class="btn btn-primary" onclick="exportAgenda('json')"><i class="fas fa-file-code"></i> Export JSON</button><button class="btn btn-success" onclick="exportAgenda('csv')"><i class="fas fa-file-csv"></i> Export CSV (Excel)</button></div></div></div></div>
                     </div>
                 </div>
 
@@ -110,19 +120,9 @@
                     <div class="card compact-card"><div class="card-body" style="padding:0;"><div class="table-responsive"><table class="table table-compact" id="usersTableCompact"><thead><tr><th style="width:50px;">No</th><th>User</th><th>Jabatan</th><th>Role</th><th>Sesi</th><th style="width:200px;">Aksi</th></tr></thead><tbody></tbody></table></div></div></div>
                 </div>
 
-                <div id="page-settings" class="page">
+                <div id="page-settings" class="page admin-only">
                     <div class="card"><div class="card-header"><h3><i class="fas fa-cog"></i> Pengaturan WhatsApp</h3></div><div class="card-body">
-                        <div class="form-group">
-                            <label>Mode Pengiriman</label>
-                            <select id="waMode" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;">
-                                <option value="contact">📱 Pilih Kontak / Grup (Rekomendasi)</option>
-                                <option value="number">🔢 Nomor Spesifik</option>
-                            </select>
-                            <div id="waNumberInput" style="display:none;">
-                                <textarea id="waNumbers" rows="3" placeholder="6281234567890&#10;6289876543210"></textarea>
-                                <small class="text-muted">Pisahkan dengan koma atau enter. Kosongkan jika ingin pilih grup/kontak manual.</small>
-                            </div>
-                        </div>
+                        <div class="form-group"><label>Mode Pengiriman</label><select id="waMode" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;"><option value="contact">📱 Pilih Kontak / Grup</option><option value="number">🔢 Nomor Spesifik</option></select><div id="waNumberInput" style="display:none;"><textarea id="waNumbers" rows="3" placeholder="6281234567890&#10;6289876543210"></textarea></div></div>
                         <button class="btn btn-primary" onclick="saveWaSettings()"><i class="fas fa-save"></i> Simpan Pengaturan</button>
                     </div></div>
                 </div>
@@ -136,7 +136,7 @@
 
     <div class="modal" id="agendaModal"><div class="modal-content"><div class="modal-header"><h3 id="agendaModalTitle">Tambah Agenda</h3><button class="modal-close" onclick="closeAgendaModal()">&times;</button></div><form id="agendaForm"><input type="hidden" id="agendaId"><div class="form-group"><label>Tanggal *</label><input type="date" id="agendaTanggal" required></div><div class="form-row"><div class="form-group"><label>Waktu Mulai *</label><input type="time" id="agendaWaktuMulai" required></div><div class="form-group"><label>Waktu Selesai *</label><input type="time" id="agendaWaktuSelesai" required></div></div><div class="form-group"><label>Tempat *</label><input type="text" id="agendaTempat" required placeholder="Lokasi kegiatan"></div><div class="form-group"><label>Kegiatan *</label><input type="text" id="agendaKegiatan" required placeholder="Nama kegiatan"></div><hr style="margin:15px 0;border:0;border-top:1px solid var(--border);"><h4 style="font-size:0.85rem;color:var(--primary);margin:10px 0;">Detail Tambahan (Opsional)</h4><div class="form-row"><div class="form-group"><label>Penanggung Jawab</label><input type="text" id="agendaPJ" placeholder="Nama PIC"></div><div class="form-group"><label>Pakaian</label><input type="text" id="agendaPakaian" placeholder="Contoh: PDH / Batik"></div></div><div class="form-row"><div class="form-group"><label>Petugas</label><input type="text" id="agendaPetugas" placeholder="Nama petugas"></div><div class="form-group"><label>Pejabat</label><input type="text" id="agendaPejabat" placeholder="Nama pejabat"></div></div><div class="form-group"><label>Keterangan</label><textarea id="agendaKeterangan" rows="3" placeholder="Catatan tambahan..."></textarea></div><div class="form-group"><label><input type="checkbox" id="sendWhatsApp" checked><i class="fab fa-whatsapp" style="color:#25D366;"></i> Kirim notifikasi via WhatsApp</label></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAgendaModal()">Batal</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>
 
-    <div class="modal" id="userModal"><div class="modal-content"><div class="modal-header"><h3 id="userModalTitle">Tambah User</h3><button class="modal-close" onclick="closeUserModal()">&times;</button></div><form id="userForm"><input type="hidden" id="userOldUsername"><div class="form-group"><label>Username *</label><input type="text" id="userUsername" required></div><div class="form-group"><label>Password *</label><input type="password" id="userPassword" required></div><div class="form-group"><label>Nama Lengkap *</label><input type="text" id="userNama" required></div><div class="form-group"><label>Jabatan *</label><input type="text" id="userJabatan" required></div><div class="form-group"><label>Role *</label><select id="userRole" required><option value="user">User</option><option value="admin">Admin</option></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeUserModal()">Batal</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>
+    <div class="modal" id="userModal"><div class="modal-content"><div class="modal-header"><h3 id="userModalTitle">Tambah User</h3><button class="modal-close" onclick="closeUserModal()">&times;</button></div><form id="userForm"><input type="hidden" id="userOldUsername"><div class="form-group"><label>Username *</label><input type="text" id="userUsername" required></div><div class="form-group"><label>Password *</label><input type="password" id="userPassword" required></div><div class="form-group"><label>Nama Lengkap *</label><input type="text" id="userNama" required></div><div class="form-group"><label>Jabatan *</label><input type="text" id="userJabatan" required placeholder="Contoh: Kasi Bimas"></div><div class="form-group"><label>Role *</label><select id="userRole" required><option value="user">User (Staf)</option><option value="pimpinan">Pimpinan (Read Only)</option><option value="admin">Admin (Full Access)</option></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeUserModal()">Batal</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>
 
     <div id="toast" class="toast"></div>
     <div id="loading" class="loading-overlay" style="display:none;"><div class="spinner"></div><p>Memuat data...</p></div>
