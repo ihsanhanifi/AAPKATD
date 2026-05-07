@@ -183,8 +183,8 @@ function buildSingleMessage(a) {
     msg += "*" + (a.kegiatan || '-') + "*\n\n";
     msg += "👤 *Penanggung Jawab:* " + (a.penanggung_jawab || '-') + "\n";
     msg += "👔 *Pakaian:* " + (a.pakaian || '-') + "\n";
-    msg += "👥 *Petugas:* " + (a.petugas || '-') + "\n";
-    msg += "🏅 *Pejabat:* " + (a.pejabat || '-') + "\n\n";
+    msg += "👥 *Petugas yang Menghadiri:* " + (a.petugas || '-') + "\n";
+    msg += "🏅 *Pejabat yang Hadir:* " + (a.pejabat || '-') + "\n\n";
     msg += "📌 *Keterangan:* " + (a.keterangan || '-') + "\n";
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
     msg += "👤 *Input oleh:* " + ((currentUser && currentUser.username) || 'Admin') + "\n";
