@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#1a5632">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
     <title>Agenda Pimpinan - Kemenag Kab. Tanah Datar</title>
     <link rel="stylesheet" href="css/style.css">
@@ -112,11 +113,17 @@
                 <div id="page-settings" class="page">
                     <div class="card"><div class="card-header"><h3><i class="fas fa-cog"></i> Pengaturan WhatsApp</h3></div><div class="card-body">
                         <div class="form-group">
-                            <label>Nomor WhatsApp (Bisa banyak, pisahkan dengan koma atau enter)</label>
-                            <textarea id="waNumbers" rows="4" placeholder="6281234567890&#10;6289876543210"></textarea>
-                            <small class="text-muted">Aplikasi akan membuka WhatsApp secara berurutan untuk setiap nomor.</small>
+                            <label>Mode Pengiriman</label>
+                            <select id="waMode" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;">
+                                <option value="contact">📱 Pilih Kontak / Grup (Rekomendasi)</option>
+                                <option value="number">🔢 Nomor Spesifik</option>
+                            </select>
+                            <div id="waNumberInput" style="display:none;">
+                                <textarea id="waNumbers" rows="3" placeholder="6281234567890&#10;6289876543210"></textarea>
+                                <small class="text-muted">Pisahkan dengan koma atau enter. Kosongkan jika ingin pilih grup/kontak manual.</small>
+                            </div>
                         </div>
-                        <button class="btn btn-primary" onclick="saveWaNumbers()"><i class="fas fa-save"></i> Simpan Pengaturan</button>
+                        <button class="btn btn-primary" onclick="saveWaSettings()"><i class="fas fa-save"></i> Simpan Pengaturan</button>
                     </div></div>
                 </div>
             </div>
