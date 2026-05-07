@@ -58,7 +58,8 @@ async function handleLogin(e) {
 function handleLogout() { clearTimeout(idleTimer); sessionStorage.removeItem('agendaUser'); currentUser = null; document.getElementById('loginPage').style.display='flex'; document.getElementById('appPage').style.display='none'; document.getElementById('loginForm')?.reset(); }
 
 function showApp() {
-    document.getElementById('loginPage').style.display='none'; document.getElementById('appPage').style.display='flex';
+    document.getElementById('loginPage').style.display='none'; 
+    document.getElementById('appPage').style.display='flex';
     document.getElementById('userAvatar').textContent=currentUser.nama_lengkap.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
     document.getElementById('userName').textContent=currentUser.nama_lengkap; 
     document.getElementById('userRole').textContent=currentUser.jabatan;
@@ -76,7 +77,12 @@ function showApp() {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
     }
 
-    setupAutoLogout(); window.navigateTo('dashboard'); loadSettings(); 
+    setupAutoLogout(); 
+    loadSettings();
+    
+    // ✅ FIX: Tampilkan dashboard dulu, lalu fetch data agar tidak kosong
+    window.navigateTo('dashboard');
+    loadAgenda(); 
 }
 
 async function checkMySession() { if(!currentUser) return; const res = await api('checkMySession', {username: currentUser.username}, { skipLoading: true }); if(res.status==='success' && res.data?.force_logout) { showToast('⚠️ Sesi Anda telah diakhiri oleh Admin.', 'warning'); setTimeout(() => handleLogout(), 1500); } }
@@ -92,7 +98,23 @@ window.navigateTo = function(page) {
 }
 
 function normalizeStatus() { const today=new Date().toISOString().split('T')[0]; allAgenda.forEach(a=>{if(a.tanggal && a.tanggal<today) a.status='selesai';}); }
-async function loadAgenda() { const res = await api('getAgenda',{username:currentUser.username,role:currentUser.role,startDate:document.getElementById('filterStartDate')?.value||'',endDate:document.getElementById('filterEndDate')?.value||'',search:document.getElementById('filterSearch')?.value||''}); if(res.status==='success'){ allAgenda=res.data||[]; normalizeStatus(); renderAgendaTable(); loadDashboard(); } return res; }
+
+async function loadAgenda() { 
+    const res = await api('getAgenda',{
+        username: currentUser.username,
+        role: currentUser.role,
+        startDate:document.getElementById('filterStartDate')?.value||'',
+        endDate:document.getElementById('filterEndDate')?.value||'',
+        search:document.getElementById('filterSearch')?.value||''
+    }); 
+    if(res.status==='success'){ 
+        allAgenda=res.data||[]; 
+        normalizeStatus(); 
+        renderAgendaTable(); 
+        loadDashboard(); // ✅ Update stats setelah data datang
+    } 
+    return res; 
+}
 
 async function handleAgendaSubmit(e) {
     e.preventDefault(); const id=document.getElementById('agendaId').value; 
@@ -186,14 +208,28 @@ window.editAgenda=function(id){openAgendaModal(id);};
 window.deleteAgenda=async function(id){if(!confirm('Hapus agenda ini?'))return;const res=await api('deleteAgenda',{id});if(res.status==='success'){showToast(res.message,'success');loadAgenda();}};
 
 async function loadUsers(){ const res = await api('getUsers'); if(res.status === 'success') renderUsersTableCompact(res.data); }
+
 function renderUsersTableCompact(users){
     const tbody = document.querySelector('#usersTableCompact tbody'); if(!tbody) return; tbody.innerHTML = '';
     if(!users.length){ tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 30px;"><i class="fas fa-users fa-2x mb-2"></i><br>Tidak ada user</td></tr>'; return; }
     users.forEach((u, index) => {
-        const rc = (u.role || 'user').toString().trim().toLowerCase(); const roleClass = rc === 'admin' ? 'role-admin' : (rc === 'pimpinan' ? 'role-warning' : 'role-user'); const roleLabel = rc === 'admin' ? 'Admin' : (rc === 'pimpinan' ? 'Pimpinan' : 'User');
-        const roleIcon = rc === 'admin' ? 'fas fa-shield-alt' : (rc === 'pimpinan' ? 'fas fa-user-tie' : 'fas fa-user'); const isForced = u.force_logout;
+        const rc = (u.role || 'user').toString().trim().toLowerCase(); 
+        const roleClass = rc === 'admin' ? 'role-admin' : (rc === 'pimpinan' ? 'role-warning' : 'role-user'); 
+        const roleLabel = rc === 'admin' ? 'Admin' : (rc === 'pimpinan' ? 'Pimpinan' : 'User');
+        const roleIcon = rc === 'admin' ? 'fas fa-shield-alt' : (rc === 'pimpinan' ? 'fas fa-user-tie' : 'fas fa-user'); 
+        const isForced = u.force_logout;
+        
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${index + 1}</td><td><div class="user-info-compact"><div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div><div class="user-details-compact"><div class="user-name-compact">${u.nama_lengkap || '-'}</div><div class="user-username-compact">@${u.username}</div></div></div></td><td>${u.jabatan || '-'}</td><td><span class="badge-compact ${roleClass}"><i class="${roleIcon}"></i> ${roleLabel}</span></td><td><span class="badge ${isForced ? 'badge-danger' : 'badge-success'}">${isForced ? '🔴 Nonaktif' : '🟢 Aktif'}</span></td><td><div class="action-btns-compact">${rc !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="forceLogoutUser('${u.username}')" title="Paksa Logout"><i class="fas fa-power-off"></i> Logout</button><button class="btn btn-success btn-sm" onclick="allowLoginUser('${u.username}')" title="Izinkan Login"><i class="fas fa-check"></i> Izinkan</button>` : `<span class="text-muted" style="font-size:0.8rem;">Admin Utama</span>`}</div></td>`;
+        // ✅ FIX: Tombol Edit dikembalikan
+        tr.innerHTML = `<td>${index + 1}</td>
+            <td><div class="user-info-compact"><div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div><div class="user-details-compact"><div class="user-name-compact">${u.nama_lengkap || '-'}</div><div class="user-username-compact">@${u.username}</div></div></div></td>
+            <td>${u.jabatan || '-'}</td>
+            <td><span class="badge-compact ${roleClass}"><i class="${roleIcon}"></i> ${roleLabel}</span></td>
+            <td><span class="badge ${isForced ? 'badge-danger' : 'badge-success'}">${isForced ? '🔴 Nonaktif' : '🟢 Aktif'}</span></td>
+            <td><div class="action-btns-compact">
+                <button class="btn btn-warning btn-sm" onclick="editUser('${u.username}')" title="Edit"><i class="fas fa-edit"></i></button>
+                ${rc !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="forceLogoutUser('${u.username}')" title="Paksa Logout"><i class="fas fa-power-off"></i> Logout</button><button class="btn btn-success btn-sm" onclick="allowLoginUser('${u.username}')" title="Izinkan Login"><i class="fas fa-check"></i> Izinkan</button>` : `<span class="text-muted" style="font-size:0.8rem;">Admin Utama</span>`}
+            </div></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -208,7 +244,7 @@ function openUserModal(username=null){
     document.getElementById('userOldUsername').value='';
     document.getElementById('userPassword').placeholder='Masukkan password';
     document.getElementById('userPassword').required=true;
-    document.getElementById('userRole').value='user'; // Default ke user saat tambah baru
+    document.getElementById('userRole').value='user'; // Default
     
     if(username){
         const rows=document.querySelectorAll('#usersTableCompact tbody tr'); 
@@ -218,13 +254,10 @@ function openUserModal(username=null){
                 document.getElementById('userOldUsername').value=username;
                 document.getElementById('userNama').value=row.querySelector('.user-name-compact').textContent;
                 document.getElementById('userJabatan').value=row.querySelector('td:nth-child(3)').textContent;
-                
-                // ✅ FIX: Parsing role yang lebih aman
                 const badgeText = row.querySelector('.badge-compact').textContent.trim().toLowerCase();
                 if(badgeText.includes('admin')) document.getElementById('userRole').value='admin';
                 else if(badgeText.includes('pimpinan')) document.getElementById('userRole').value='pimpinan';
                 else document.getElementById('userRole').value='user';
-                
                 document.getElementById('userPassword').required=false;
                 document.getElementById('userPassword').placeholder='Kosongkan jika tidak diubah';
                 break;
@@ -236,8 +269,8 @@ function openUserModal(username=null){
 async function handleUserSubmit(e){
     e.preventDefault();
     const old=document.getElementById('userOldUsername').value;
-    // ✅ PASTIKAN ROLE TEREKAM DENGAN BENAR
-    const roleVal = document.getElementById('userRole').value || 'user';
+    // ✅ FIX: Role diambil eksplisit, trim, toLowerCase, dan fallback aman
+    const roleVal = (document.getElementById('userRole').value || 'user').trim().toLowerCase();
     const p={
         username:document.getElementById('userUsername').value,
         role: roleVal,
@@ -255,8 +288,24 @@ function closeUserModal(){document.getElementById('userModal').classList.remove(
 window.editUser=function(u){openUserModal(u);};
 window.deleteUser=async function(u){if(!confirm(`Hapus user ${u}?`))return;const res=await api('deleteUser',{username:u});if(res.status==='success'){showToast(res.message,'success');loadUsers();}};
 
-async function loadDashboard(){ const td=new Date().toISOString().split('T')[0],we=new Date();we.setDate(we.getDate()+7);const weS=we.toISOString().split('T')[0],mS=td.substring(0,7)+'-01'; const active=allAgenda.filter(a=>a.status!=='selesai'); document.getElementById('statTotal').textContent=active.length; document.getElementById('statToday').textContent=active.filter(a=>a.tanggal===td).length; document.getElementById('statWeek').textContent=active.filter(a=>a.tanggal>=td&&a.tanggal<=weS).length; document.getElementById('statMonth').textContent=active.filter(a=>a.tanggal>=mS).length; renderUpcomingTable(); }
-function renderUpcomingTable(){ const tbody=document.querySelector('#upcomingTable tbody');if(!tbody)return;tbody.innerHTML=''; const td=new Date().toISOString().split('T')[0]; const up=allAgenda.filter(a=>a.status!=='selesai' && a.tanggal && a.tanggal>=td).sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||'')).slice(0,5); document.getElementById('upcomingTitle').textContent = up.length > 0 ? `${up.length} Agenda Mendatang` : 'Agenda Mendatang'; if(!up.length){tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted"><i class="fas fa-calendar-check fa-2x mb-2"></i><br>Tidak ada agenda mendatang</td></tr>';return;} up.forEach(a=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td><td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td><td><strong>${a.kegiatan||'-'}</strong></td><td>${a.tempat||'-'}</td><td><div style="font-size:0.85rem;">👤 ${a.penanggung_jawab||'-'} ${a.pakaian?`<br><span class="badge badge-info" style="font-size:0.7rem;">👔 ${a.pakaian}</span>`:''}</div></td><td class="write-access"><button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button></td>`;tbody.appendChild(tr);});}
+async function loadDashboard(){ 
+    const td=new Date().toISOString().split('T')[0],we=new Date();we.setDate(we.getDate()+7);
+    const weS=we.toISOString().split('T')[0],mS=td.substring(0,7)+'-01'; 
+    const active=allAgenda.filter(a=>a.status!=='selesai'); 
+    document.getElementById('statTotal').textContent=active.length; 
+    document.getElementById('statToday').textContent=active.filter(a=>a.tanggal===td).length; 
+    document.getElementById('statWeek').textContent=active.filter(a=>a.tanggal>=td&&a.tanggal<=weS).length; 
+    document.getElementById('statMonth').textContent=active.filter(a=>a.tanggal>=mS).length; 
+    renderUpcomingTable(); 
+}
+function renderUpcomingTable(){ 
+    const tbody=document.querySelector('#upcomingTable tbody');if(!tbody)return;tbody.innerHTML=''; 
+    const td=new Date().toISOString().split('T')[0]; 
+    const up=allAgenda.filter(a=>a.status!=='selesai' && a.tanggal && a.tanggal>=td).sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||'')).slice(0,5); 
+    document.getElementById('upcomingTitle').textContent = up.length > 0 ? `${up.length} Agenda Mendatang` : 'Agenda Mendatang'; 
+    if(!up.length){tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted"><i class="fas fa-calendar-check fa-2x mb-2"></i><br>Tidak ada agenda mendatang</td></tr>';return;} 
+    up.forEach(a=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td><td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td><td><strong>${a.kegiatan||'-'}</strong></td><td>${a.tempat||'-'}</td><td><div style="font-size:0.85rem;">👤 ${a.penanggung_jawab||'-'} ${a.pakaian?`<br><span class="badge badge-info" style="font-size:0.7rem;">👔 ${a.pakaian}</span>`:''}</div></td><td class="write-access"><button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button></td>`;tbody.appendChild(tr);});
+}
 
 function renderCalendar(){const y=calendarDate.getFullYear(),m=calendarDate.getMonth(),months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];document.getElementById('calendarMonthYear').textContent=`${months[m]} ${y}`;const grid=document.getElementById('calendarGrid');if(!grid)return;grid.innerHTML='';['Min','Sen','Sel','Rab','Kam','Jum','Sab'].forEach(d=>{const h=document.createElement('div');h.className='calendar-header';h.textContent=d;grid.appendChild(h);});const fd=new Date(y,m,1).getDay(),dm=new Date(y,m+1,0).getDate(),td=new Date().toISOString().split('T')[0];for(let i=0;i<fd;i++){const d=document.createElement('div');d.className='calendar-day other-month';grid.appendChild(d);}for(let d=1;d<=dm;d++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,el=document.createElement('div');el.className='calendar-day';if(ds===td)el.classList.add('today');const count=allAgenda.filter(a=>a.tanggal===ds).length;el.innerHTML=`<div class="day-number">${d}</div>${count?`<span class="day-events">${count}</span>`:''}`;el.onclick=()=>showCalendarEvents(ds);grid.appendChild(el);}}
 window.changeMonth=function(dir){calendarDate.setMonth(calendarDate.getMonth()+dir);renderCalendar();};
