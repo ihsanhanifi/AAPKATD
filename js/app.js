@@ -1,9 +1,9 @@
 // ============================================
 // AGENDA PIMPINAN - KEMENAG KAB. TANAH DATAR
-// FRONTEND JS - FINAL PRODUCTION VERSION
+// FRONTEND JS - FINAL PRODUCTION (FIX ROLE PERSISTENCE)
 // ============================================
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbwuw_pBU3noKocVmFPtWlBbtGGWQrESz9CwRTnwQ2U_Icd7J_2MQ1uyUPtykS3kPRUCnw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwDjLyHOVLDUmQMmpQzTZ_jaJGXEL0yyXGW8ObqbiLght8BERKjdHXWMdLEpNZM0fWZJA/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
 let idleTimer;
 const SESSION_TIMEOUT = 10 * 60 * 1000; 
@@ -99,7 +99,6 @@ window.navigateTo = function(page) {
 }
 
 function normalizeStatus() { const today=new Date().toISOString().split('T')[0]; allAgenda.forEach(a=>{if(a.tanggal && a.tanggal<today) a.status='selesai';}); }
-
 async function loadAgenda() { 
     const res = await api('getAgenda',{
         username: currentUser.username,
@@ -210,7 +209,6 @@ window.deleteAgenda=async function(id){if(!confirm('Hapus agenda ini?'))return;c
 
 async function loadUsers(){ const res = await api('getUsers'); if(res.status === 'success') renderUsersTableCompact(res.data); }
 
-// ✅ FIX: RENDER TABEL USER + TOMBOL HAPUS MUNCUL
 function renderUsersTableCompact(users){
     const tbody = document.querySelector('#usersTableCompact tbody'); if(!tbody) return; tbody.innerHTML = '';
     if(!users.length){ tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 30px;"><i class="fas fa-users fa-2x mb-2"></i><br>Tidak ada user</td></tr>'; return; }
@@ -222,20 +220,14 @@ function renderUsersTableCompact(users){
         const isForced = u.force_logout;
         
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${index + 1}</td>
-            <td><div class="user-info-compact"><div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div><div class="user-details-compact"><div class="user-name-compact">${u.nama_lengkap || '-'}</div><div class="user-username-compact">@${u.username}</div></div></div></td>
-            <td>${u.jabatan || '-'}</td>
-            <td><span class="badge-compact ${roleClass}"><i class="${roleIcon}"></i> ${roleLabel}</span></td>
-            <td><span class="badge ${isForced ? 'badge-danger' : 'badge-success'}">${isForced ? '🔴 Nonaktif' : '🟢 Aktif'}</span></td>
-            <td><div class="action-btns-compact">
-                <button class="btn btn-warning btn-sm" onclick="editUser('${u.username}')" title="Edit"><i class="fas fa-edit"></i></button>
-                ${rc !== 'admin' ? `
-                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')" title="Hapus"><i class="fas fa-trash"></i></button>
-                    <button class="btn btn-dark btn-sm" onclick="forceLogoutUser('${u.username}')" title="Paksa Logout"><i class="fas fa-power-off"></i></button>
-                    <button class="btn btn-success btn-sm" onclick="allowLoginUser('${u.username}')" title="Izinkan Login"><i class="fas fa-check"></i></button>
-                ` : `<span class="text-muted" style="font-size:0.8rem;">Admin Utama</span>`}
-            </div></td>`;
+        tr.innerHTML = `<td>${index + 1}</td><td><div class="user-info-compact"><div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div><div class="user-details-compact"><div class="user-name-compact">${u.nama_lengkap || '-'}</div><div class="user-username-compact">@${u.username}</div></div></div></td><td>${u.jabatan || '-'}</td><td><span class="badge-compact ${roleClass}"><i class="${roleIcon}"></i> ${roleLabel}</span></td><td><span class="badge ${isForced ? 'badge-danger' : 'badge-success'}">${isForced ? '🔴 Nonaktif' : '🟢 Aktif'}</span></td><td><div class="action-btns-compact">
+            <button class="btn btn-warning btn-sm" onclick="editUser('${u.username}')" title="Edit"><i class="fas fa-edit"></i></button>
+            ${rc !== 'admin' ? `
+                <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')" title="Hapus"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-dark btn-sm" onclick="forceLogoutUser('${u.username}')" title="Paksa Logout"><i class="fas fa-power-off"></i></button>
+                <button class="btn btn-success btn-sm" onclick="allowLoginUser('${u.username}')" title="Izinkan Login"><i class="fas fa-check"></i></button>
+            ` : `<span class="text-muted" style="font-size:0.8rem;">Admin Utama</span>`}
+        </div></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -243,72 +235,75 @@ function renderUsersTableCompact(users){
 window.forceLogoutUser = async function(username) { if(!confirm(`Paksa logout user ${username}? User akan keluar otomatis dalam 20 detik.`)) return; const res = await api('forceLogoutUser', {username}); if(res.status==='success'){ showToast(res.message, 'success'); loadUsers(); } }
 window.allowLoginUser = async function(username) { const res = await api('allowLoginUser', {username}); if(res.status==='success'){ showToast(res.message, 'success'); loadUsers(); } }
 
-// ✅ FIX: MODAL EDIT MENAMPILKAN ROLE YANG BENAR
+// ✅ PERBAIKAN: BACA ROLE DARI TABEL & SET DROPDOWN
 function openUserModal(username=null){
     document.getElementById('userModal').classList.add('active');
-    document.getElementById('userModalTitle').textContent=username?'Edit User':'Tambah User';
+    document.getElementById('userModalTitle').textContent = username ? 'Edit User' : 'Tambah User';
     document.getElementById('userForm').reset();
-    document.getElementById('userOldUsername').value='';
-    document.getElementById('userPassword').placeholder='Masukkan password';
-    document.getElementById('userPassword').required=true;
-    document.getElementById('userRole').value='user'; // Default
+    document.getElementById('userOldUsername').value = '';
+    document.getElementById('userPassword').placeholder = 'Masukkan password';
+    document.getElementById('userPassword').required = true;
+    document.getElementById('userRole').value = 'user'; // Default
     
     if(username){
-        const rows=document.querySelectorAll('#usersTableCompact tbody tr'); 
+        const rows = document.querySelectorAll('#usersTableCompact tbody tr');
         for(let row of rows){
-            const usernameCell = row.querySelector('.user-username-compact');
-            if(usernameCell && usernameCell.textContent.includes(username)){
-                document.getElementById('userUsername').value=username;
-                document.getElementById('userOldUsername').value=username;
-                document.getElementById('userNama').value=row.querySelector('.user-name-compact').textContent;
-                document.getElementById('userJabatan').value=row.querySelector('td:nth-child(3)').textContent;
+            const uname = row.querySelector('.user-username-compact')?.textContent;
+            if(uname && uname.includes(username)){
+                document.getElementById('userUsername').value = username;
+                document.getElementById('userOldUsername').value = username;
+                document.getElementById('userNama').value = row.querySelector('.user-name-compact').textContent;
+                document.getElementById('userJabatan').value = row.querySelector('td:nth-child(3)').textContent;
                 
-                // Baca role persis dari badge di tabel
-                const badge = row.querySelector('.badge-compact');
-                const badgeText = badge ? badge.textContent.trim().toLowerCase() : '';
+                // Baca role eksplisit dari badge
+                const badgeText = row.querySelector('.badge-compact')?.textContent.trim().toLowerCase() || '';
+                if(badgeText.includes('admin')) document.getElementById('userRole').value = 'admin';
+                else if(badgeText.includes('pimpinan')) document.getElementById('userRole').value = 'pimpinan';
+                else document.getElementById('userRole').value = 'user';
                 
-                if(badgeText.includes('admin')) document.getElementById('userRole').value='admin';
-                else if(badgeText.includes('pimpinan')) document.getElementById('userRole').value='pimpinan';
-                else document.getElementById('userRole').value='user';
-                
-                document.getElementById('userPassword').required=false;
-                document.getElementById('userPassword').placeholder='Kosongkan jika tidak diubah';
+                document.getElementById('userPassword').required = false;
+                document.getElementById('userPassword').placeholder = 'Kosongkan jika tidak diubah';
                 break;
             }
         }
     }
 }
 
-// ✅ FIX: VALIDASI ROLE EKSTENSIF SEBELUM KIRIM KE SERVER
+// ✅ PERBAIKAN: KIRIM PAYLOAD ROLE EKSPLESIT
 async function handleUserSubmit(e){
     e.preventDefault();
-    const old=document.getElementById('userOldUsername').value;
+    const old = document.getElementById('userOldUsername').value;
     
-    const roleSelect = document.getElementById('userRole');
-    let roleVal = roleSelect ? roleSelect.value.trim().toLowerCase() : 'user';
+    // 1. Ambil nilai EXAK dari dropdown
+    const roleVal = document.getElementById('userRole').value.trim().toLowerCase();
+    console.log(' [FRONTEND] Role selected:', roleVal);
     
-    // Validasi ketat: hanya izinkan 3 role ini
-    const allowedRoles = ['admin', 'pimpinan', 'user'];
-    if(!allowedRoles.includes(roleVal)) roleVal = 'user';
-
-    console.log('📤 Role yang dikirim ke server:', roleVal); // Debug console
-
-    const p={
+    // 2. Bangun payload
+    const payload = {
         username: document.getElementById('userUsername').value.trim(),
-        role: roleVal,
+        role: roleVal, // ✅ Kirim persis string ini
         nama_lengkap: document.getElementById('userNama').value.trim(),
         jabatan: document.getElementById('userJabatan').value.trim()
     };
-    
-    const pwd=document.getElementById('userPassword').value;
+
+    const pwd = document.getElementById('userPassword').value;
     let res;
-    if(old){if(pwd)p.newPassword=pwd; res=await api('updateUser',p);}
-    else{p.password=pwd; res=await api('addUser',p);}
-    
-    if(res.status==='success'){
-        showToast(res.message,'success');
-        closeUserModal();
-        loadUsers();
+    if(old){ 
+        if(pwd) payload.newPassword = pwd; 
+        console.log('📤 [FRONTEND] Calling updateUser:', payload);
+        res = await api('updateUser', payload); 
+    } else { 
+        payload.password = pwd; 
+        console.log('📤 [FRONTEND] Calling addUser:', payload);
+        res = await api('addUser', payload); 
+    }
+
+    if(res.status==='success'){ 
+        showToast(res.message,'success'); 
+        closeUserModal(); 
+        loadUsers(); 
+    } else { 
+        console.error('❌ Server rejected:', res.message); 
     }
 }
 
@@ -395,7 +390,6 @@ function showToast(msg, type='info', duration=4000){ const t=document.getElement
 function updateClock(){const n=new Date();const o={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};const e=document.getElementById('currentDateTime');if(e)e.textContent=n.toLocaleDateString('id-ID',o);}
 function formatDate(ds){if(!ds)return'-';if(ds instanceof Date){const d=ds.getDate(),m=ds.getMonth(),y=ds.getFullYear();const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${d} ${mo[m]} ${y}`;}const p=String(ds).trim().split(/[-T]/);if(p.length>=3){const[y,m,d]=p;const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${parseInt(d,10)} ${mo[parseInt(m,10)-1]} ${y}`;}return String(ds);}
 
-// ✅ GLOBAL EXPORT
 window.navigateTo=window.navigateTo||navigateTo;
 window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect;
 window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById;
