@@ -1,12 +1,11 @@
 // ============================================
-// AGENDA PIMPINAN - KEMENAG KAB. TANAH DATAR
-// FRONTEND JS - FINAL PRODUCTION (FIX ROLE PERSISTENCE)
+// AGENDA PIMPINAN - FRONTEND JS (CLEAN & FIXED)
 // ============================================
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbymrRxD3Q3t1IkFISFCRol0la4RqyOVdyhvmm0vKTMNs65BjJeSRTKWUc2AGtFjCeXV7w/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
 let idleTimer;
-const SESSION_TIMEOUT = 10 * 60 * 1000; 
+const SESSION_TIMEOUT = 10 * 60 * 1000;
 
 const E = {
     building: String.fromCodePoint(0x1F3DB, 0xFE0F), date: String.fromCodePoint(0x1F4C5), clock: String.fromCodePoint(0x23F0),
@@ -26,8 +25,15 @@ function setupEvents() {
     const loginForm = document.getElementById('loginForm'); if(loginForm) loginForm.addEventListener('submit', e => { e.preventDefault(); handleLogin(e); });
     const logoutBtn = document.getElementById('logoutBtn'); if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     const agendaForm = document.getElementById('agendaForm'); if(agendaForm) agendaForm.addEventListener('submit', e => { e.preventDefault(); handleAgendaSubmit(e); });
-    const userForm = document.getElementById('userForm'); if(userForm) userForm.addEventListener('submit', e => { e.preventDefault(); handleUserSubmit(e); });
     
+    const btnSaveUser = document.getElementById('btnSaveUser');
+    if(btnSaveUser) {
+        btnSaveUser.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleUserSubmit();
+        });
+    }
+
     document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); const page=link.dataset.page; if(page) window.navigateTo(page); }));
     document.getElementById('btnViewAllAgenda')?.addEventListener('click', e => { e.preventDefault(); window.navigateTo('agenda'); });
     document.getElementById('btnSendDaily')?.addEventListener('click', e => { e.preventDefault(); sendDailyAgenda(); });
@@ -38,6 +44,14 @@ function setupEvents() {
     document.getElementById('selectAllAgenda')?.addEventListener('change', e => { document.querySelectorAll('.agenda-check').forEach(cb => cb.checked = e.target.checked); });
     const waMode = document.getElementById('waMode'); const waNumInput = document.getElementById('waNumberInput');
     if(waMode && waNumInput) { waMode.addEventListener('change', () => { waNumInput.style.display = waMode.value === 'number' ? 'block' : 'none'; }); }
+
+    // DIAGNOSTIK
+    const roleSelect = document.getElementById('userRole');
+    if(roleSelect) {
+        roleSelect.addEventListener('change', function() {
+            console.log('🔄 [LIVE] Role changed to:', this.value, '| Index:', this.selectedIndex);
+        });
+    }
 }
 
 async function api(action, payload = {}, options = {}) {
@@ -67,7 +81,8 @@ function showApp() {
     document.getElementById('loginPage').style.display='none'; document.getElementById('appPage').style.display='flex';
     document.getElementById('userAvatar').textContent=currentUser.nama_lengkap.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
     document.getElementById('userName').textContent=currentUser.nama_lengkap; 
-    document.getElementById('userRole').textContent=currentUser.jabatan;
+    const roleTextEl = document.getElementById('userRoleText');
+    if(roleTextEl) roleTextEl.textContent=currentUser.jabatan;
     
     const role = currentUser.role;
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
@@ -220,14 +235,21 @@ function renderUsersTableCompact(users){
         const isForced = u.force_logout;
         
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${index + 1}</td><td><div class="user-info-compact"><div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div><div class="user-details-compact"><div class="user-name-compact">${u.nama_lengkap || '-'}</div><div class="user-username-compact">@${u.username}</div></div></div></td><td>${u.jabatan || '-'}</td><td><span class="badge-compact ${roleClass}"><i class="${roleIcon}"></i> ${roleLabel}</span></td><td><span class="badge ${isForced ? 'badge-danger' : 'badge-success'}">${isForced ? '🔴 Nonaktif' : '🟢 Aktif'}</span></td><td><div class="action-btns-compact">
-            <button class="btn btn-warning btn-sm" onclick="editUser('${u.username}')" title="Edit"><i class="fas fa-edit"></i></button>
-            ${rc !== 'admin' ? `
-                <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')" title="Hapus"><i class="fas fa-trash"></i></button>
-                <button class="btn btn-dark btn-sm" onclick="forceLogoutUser('${u.username}')" title="Paksa Logout"><i class="fas fa-power-off"></i></button>
-                <button class="btn btn-success btn-sm" onclick="allowLoginUser('${u.username}')" title="Izinkan Login"><i class="fas fa-check"></i></button>
-            ` : `<span class="text-muted" style="font-size:0.8rem;">Admin Utama</span>`}
-        </div></td>`;
+        tr.setAttribute('data-role', rc);
+        tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td><div class="user-info-compact"><div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div><div class="user-details-compact"><div class="user-name-compact">${u.nama_lengkap || '-'}</div><div class="user-username-compact">@${u.username}</div></div></div></td>
+            <td>${u.jabatan || '-'}</td>
+            <td><span class="badge-compact ${roleClass}"><i class="${roleIcon}"></i> ${roleLabel}</span></td>
+            <td><span class="badge ${isForced ? 'badge-danger' : 'badge-success'}">${isForced ? '🔴 Nonaktif' : '🟢 Aktif'}</span></td>
+            <td><div class="action-btns-compact">
+                <button class="btn btn-warning btn-sm" onclick="editUser('${u.username}')" title="Edit"><i class="fas fa-edit"></i></button>
+                ${rc !== 'admin' ? `
+                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')" title="Hapus"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-dark btn-sm" onclick="forceLogoutUser('${u.username}')" title="Paksa Logout"><i class="fas fa-power-off"></i></button>
+                    <button class="btn btn-success btn-sm" onclick="allowLoginUser('${u.username}')" title="Izinkan Login"><i class="fas fa-check"></i></button>
+                ` : `<span class="text-muted" style="font-size:0.8rem;">Admin Utama</span>`}
+            </div></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -235,31 +257,32 @@ function renderUsersTableCompact(users){
 window.forceLogoutUser = async function(username) { if(!confirm(`Paksa logout user ${username}? User akan keluar otomatis dalam 20 detik.`)) return; const res = await api('forceLogoutUser', {username}); if(res.status==='success'){ showToast(res.message, 'success'); loadUsers(); } }
 window.allowLoginUser = async function(username) { const res = await api('allowLoginUser', {username}); if(res.status==='success'){ showToast(res.message, 'success'); loadUsers(); } }
 
-// ✅ PERBAIKAN: BACA ROLE DARI TABEL & SET DROPDOWN
-function openUserModal(username=null){
+function openUserModal(username = null) {
     document.getElementById('userModal').classList.add('active');
-    document.getElementById('userModalTitle').textContent = username ? 'Edit User' : 'Tambah User';
     document.getElementById('userForm').reset();
     document.getElementById('userOldUsername').value = '';
     document.getElementById('userPassword').placeholder = 'Masukkan password';
     document.getElementById('userPassword').required = true;
-    document.getElementById('userRole').value = 'user'; // Default
+    document.getElementById('userModalTitle').textContent = username ? 'Edit User' : 'Tambah User';
     
-    if(username){
+    const roleEl = document.getElementById('userRole');
+    if(roleEl) roleEl.value = 'user';
+
+    if (username) {
         const rows = document.querySelectorAll('#usersTableCompact tbody tr');
-        for(let row of rows){
+        for (let row of rows) {
             const uname = row.querySelector('.user-username-compact')?.textContent;
-            if(uname && uname.includes(username)){
+            if (uname && uname.includes(username)) {
                 document.getElementById('userUsername').value = username;
                 document.getElementById('userOldUsername').value = username;
                 document.getElementById('userNama').value = row.querySelector('.user-name-compact').textContent;
                 document.getElementById('userJabatan').value = row.querySelector('td:nth-child(3)').textContent;
-                
-                // Baca role eksplisit dari badge
-                const badgeText = row.querySelector('.badge-compact')?.textContent.trim().toLowerCase() || '';
-                if(badgeText.includes('admin')) document.getElementById('userRole').value = 'admin';
-                else if(badgeText.includes('pimpinan')) document.getElementById('userRole').value = 'pimpinan';
-                else document.getElementById('userRole').value = 'user';
+
+                const rowRole = row.getAttribute('data-role') || 'user';
+                if (roleEl) {
+                    roleEl.value = rowRole;
+                    roleEl.dispatchEvent(new Event('change'));
+                }
                 
                 document.getElementById('userPassword').required = false;
                 document.getElementById('userPassword').placeholder = 'Kosongkan jika tidak diubah';
@@ -269,41 +292,58 @@ function openUserModal(username=null){
     }
 }
 
-// ✅ PERBAIKAN: KIRIM PAYLOAD ROLE EKSPLESIT
-async function handleUserSubmit(e){
-    e.preventDefault();
-    const old = document.getElementById('userOldUsername').value;
+// ✅ DIAGNOSTIK & PERBAIKAN MUTLAK
+async function handleUserSubmit() {
+    console.log('🚀 [SUBMIT] Klik Simpan terdeteksi!');
     
-    // 1. Ambil nilai EXAK dari dropdown
-    const roleVal = document.getElementById('userRole').value.trim().toLowerCase();
-    console.log(' [FRONTEND] Role selected:', roleVal);
-    
-    // 2. Bangun payload
-    const payload = {
-        username: document.getElementById('userUsername').value.trim(),
-        role: roleVal, // ✅ Kirim persis string ini
-        nama_lengkap: document.getElementById('userNama').value.trim(),
-        jabatan: document.getElementById('userJabatan').value.trim()
-    };
+    // Fix Typo: getElemen tById -> getElementById
+    const roleEl = document.getElementById('userRole');
+    if(!roleEl) return console.error('❌ Elemen #userRole TIDAK DITEMUKAN di DOM!');
 
+    console.log('🔍 [DOM CHECK] HTML Dropdown saat ini:', roleEl.outerHTML);
+    console.log('🔍 [DOM CHECK] value saat ini:', roleEl.value);
+    console.log('🔍 [DOM CHECK] selectedIndex:', roleEl.selectedIndex, '-> Option value:', roleEl.options[roleEl.selectedIndex].value);
+
+    // Fix Typo: select edRole -> selectedRole
+    let selectedRole = roleEl.value.trim().toLowerCase();
+    if (!selectedRole || selectedRole === '') selectedRole = roleEl.options[roleEl.selectedIndex].value.trim().toLowerCase();
+    if (!selectedRole || selectedRole === '') selectedRole = 'user';
+
+    // Fix Typo: do cument -> document
+    const username = document.getElementById('userUsername').value.trim();
+    const nama = document.getElementById('userNama').value.trim();
+    const jabatan = document.getElementById('userJabatan').value.trim();
     const pwd = document.getElementById('userPassword').value;
-    let res;
-    if(old){ 
-        if(pwd) payload.newPassword = pwd; 
-        console.log('📤 [FRONTEND] Calling updateUser:', payload);
-        res = await api('updateUser', payload); 
-    } else { 
-        payload.password = pwd; 
-        console.log('📤 [FRONTEND] Calling addUser:', payload);
-        res = await api('addUser', payload); 
-    }
+    const old = document.getElementById('userOldUsername').value;
 
-    if(res.status==='success'){ 
-        showToast(res.message,'success'); 
-        closeUserModal(); 
-        loadUsers(); 
-    } else { 
-        console.error('❌ Server rejected:', res.message); 
+    if (!username || !nama || !jabatan) { showToast('⚠️ Username, Nama, dan Jabatan wajib diisi!', 'warning'); return; }
+    // Fix Typo: & & -> &&
+    if (!old && !pwd) { showToast('⚠️ Password wajib diisi untuk user baru!', 'warning'); return; }
+
+    console.log('📤 [FINAL PAYLOAD] Role yang akan dikirim:', selectedRole);
+
+    // Fix Typo: u sername -> username
+    const payload = { username, role: selectedRole, nama_lengkap: nama, jabatan };
+    if (old && pwd) payload.newPassword = pwd;
+    if (!old) payload.password = pwd;
+
+    const btn = document.getElementById('btnSaveUser');
+    if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; }
+
+    let res;
+    try {
+        res = old ? await api('updateUser', payload) : await api('addUser', payload);
+        if (res.status === 'success') {
+            showToast(res.message, 'success');
+            closeUserModal();
+            loadUsers();
+        } else {
+            showToast('❌ Gagal: ' + res.message, 'error');
+        }
+    } catch(err) {
+        showToast('❌ Error Server.', 'error');
+    } finally {
+        if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Simpan'; }
     }
 }
 
@@ -318,35 +358,18 @@ function renderCalendar(){
     const y=calendarDate.getFullYear(), m=calendarDate.getMonth();
     const months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
     document.getElementById('calendarMonthYear').textContent=`${months[m]} ${y}`;
-    const grid=document.getElementById('calendarGrid');
-    if(!grid) return;
+    const grid=document.getElementById('calendarGrid'); if(!grid) return;
     grid.innerHTML='';
-    ['Min','Sen','Sel','Rab','Kam','Jum','Sab'].forEach(d=>{
-        const h=document.createElement('div');
-        h.className='calendar-header';
-        h.textContent=d;
-        grid.appendChild(h);
-    });
-    const fd=new Date(y,m,1).getDay();
-    const dm=new Date(y,m+1,0).getDate();
-    const td=new Date().toISOString().split('T')[0];
-    
-    for(let i=0;i<fd;i++){
-        const d=document.createElement('div');
-        d.className='calendar-day other-month';
-        grid.appendChild(d);
-    }
-    
+    ['Min','Sen','Sel','Rab','Kam','Jum','Sab'].forEach(d=>{ const h=document.createElement('div'); h.className='calendar-header'; h.textContent=d; grid.appendChild(h); });
+    const fd=new Date(y,m,1).getDay(); const dm=new Date(y,m+1,0).getDate(); const td=new Date().toISOString().split('T')[0];
+    for(let i=0;i<fd;i++){ const d=document.createElement('div'); d.className='calendar-day other-month'; grid.appendChild(d); }
     for(let d=1;d<=dm;d++){
-        const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const el=document.createElement('div');
-        el.className='calendar-day';
+        const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const el=document.createElement('div'); el.className='calendar-day';
         if(ds===td) el.classList.add('today');
         const count=allAgenda.filter(a=>a.tanggal===ds).length;
         if(count > 0) el.classList.add('has-event');
         el.innerHTML=`<div class="day-number">${d}</div>${count?`<span class="day-events">${count}</span>`:''}`;
-        el.onclick=()=>showCalendarEvents(ds);
-        grid.appendChild(el);
+        el.onclick=()=>showCalendarEvents(ds); grid.appendChild(el);
     }
 }
 
@@ -390,25 +413,4 @@ function showToast(msg, type='info', duration=4000){ const t=document.getElement
 function updateClock(){const n=new Date();const o={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};const e=document.getElementById('currentDateTime');if(e)e.textContent=n.toLocaleDateString('id-ID',o);}
 function formatDate(ds){if(!ds)return'-';if(ds instanceof Date){const d=ds.getDate(),m=ds.getMonth(),y=ds.getFullYear();const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${d} ${mo[m]} ${y}`;}const p=String(ds).trim().split(/[-T]/);if(p.length>=3){const[y,m,d]=p;const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${parseInt(d,10)} ${mo[parseInt(m,10)-1]} ${y}`;}return String(ds);}
 
-window.navigateTo=window.navigateTo||navigateTo;
-window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect;
-window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById;
-window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect;
-window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda;
-window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas;
-window.editAgenda=window.editAgenda||editAgenda;
-window.deleteAgenda=window.deleteAgenda||deleteAgenda;
-window.openAgendaModal=window.openAgendaModal||openAgendaModal;
-window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal;
-window.loadAgenda=window.loadAgenda||loadAgenda;
-window.changeMonth=window.changeMonth||changeMonth;
-window.openUserModal=window.openUserModal||openUserModal;
-window.closeUserModal=window.closeUserModal||closeUserModal;
-window.editUser=window.editUser||editUser;
-window.deleteUser=window.deleteUser||deleteUser;
-window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser;
-window.allowLoginUser=window.allowLoginUser||allowLoginUser;
-window.confirmImport=window.confirmImport||confirmImport;
-window.exportAgenda=window.exportAgenda||exportAgenda;
-window.saveWaSettings=window.saveWaSettings||saveWaSettings;
-window.generateDailyReport=window.generateDailyReport||generateDailyReport;
+window.navigateTo=window.navigateTo||navigateTo; window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect; window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById; window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect; window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda; window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas; window.editAgenda=window.editAgenda||editAgenda; window.deleteAgenda=window.deleteAgenda||deleteAgenda; window.openAgendaModal=window.openAgendaModal||openAgendaModal; window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal; window.loadAgenda=window.loadAgenda||loadAgenda; window.changeMonth=window.changeMonth||changeMonth; window.openUserModal=window.openUserModal||openUserModal; window.closeUserModal=window.closeUserModal||closeUserModal; window.editUser=window.editUser||editUser; window.deleteUser=window.deleteUser||deleteUser; window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser; window.allowLoginUser=window.allowLoginUser||allowLoginUser; window.confirmImport=window.confirmImport||confirmImport; window.exportAgenda=window.exportAgenda||exportAgenda; window.saveWaSettings=window.saveWaSettings||saveWaSettings; window.generateDailyReport=window.generateDailyReport||generateDailyReport;
