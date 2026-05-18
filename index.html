@@ -150,7 +150,48 @@
     </div>
 
     <!-- MODAL AGENDA -->
-    <div class="modal" id="agendaModal"><div class="modal-content"><div class="modal-header"><h3 id="agendaModalTitle">Tambah Agenda</h3><button class="modal-close" onclick="closeAgendaModal()">&times;</button></div><form id="agendaForm"><input type="hidden" id="agendaId"><div class="form-group"><label>Tanggal *</label><input type="date" id="agendaTanggal" required></div><div class="form-row"><div class="form-group"><label>Waktu Mulai *</label><input type="time" id="agendaWaktuMulai" required></div><div class="form-group"><label>Waktu Selesai *</label><input type="time" id="agendaWaktuSelesai" required></div></div><div class="form-group"><label>Tempat *</label><input type="text" id="agendaTempat" required placeholder="Lokasi kegiatan"></div><div class="form-group"><label>Kegiatan *</label><input type="text" id="agendaKegiatan" required placeholder="Nama kegiatan"></div><hr style="margin:15px 0;border:0;border-top:1px solid var(--border);"><h4 style="font-size:0.85rem;color:var(--primary);margin:10px 0;">Detail Tambahan (Opsional)</h4><div class="form-row"><div class="form-group"><label>Penanggung Jawab</label><input type="text" id="agendaPJ" placeholder="Nama PIC"></div><div class="form-group"><label>Pakaian</label><input type="text" id="agendaPakaian" placeholder="Contoh: PDH / Batik"></div></div><div class="form-row"><div class="form-group"><label>Petugas</label><input type="text" id="agendaPetugas" placeholder="Nama petugas"></div><div class="form-group"><label>Pejabat</label><input type="text" id="agendaPejabat" placeholder="Nama pejabat"></div></div><div class="form-group"><label>Keterangan</label><textarea id="agendaKeterangan" rows="3" placeholder="Catatan tambahan..."></textarea></div><div class="form-group"><label><input type="checkbox" id="sendWhatsApp" checked><i class="fab fa-whatsapp" style="color:#25D366;"></i> Kirim notifikasi via WhatsApp</label></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAgendaModal()">Batal</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>
+    <div class="modal" id="agendaModal"><div class="modal-content"><div class="modal-header"><h3 id="agendaModalTitle">Tambah Agenda</h3><button class="modal-close" onclick="closeAgendaModal()">&times;</button></div><form id="agendaForm"><input type="hidden" id="agendaId"><div class="form-group"><label>Tanggal *</label><input type="date" id="agendaTanggal" required></div><div class="form-row"><div class="form-group"><label>Waktu Mulai *</label><input type="time" id="agendaWaktuMulai" required></div><div class="form-group"><label>Waktu Selesai *</label><input type="time" id="agendaWaktuSelesai" required></div></div><div class="form-group"><label>Tempat *</label><input type="text" id="agendaTempat" required placeholder="Lokasi kegiatan"></div><div class="form-group"><label>Kegiatan *</label><input type="text" id="agendaKegiatan" required placeholder="Nama kegiatan"></div><hr style="margin:15px 0;border:0;border-top:1px solid var(--border);"><h4 style="font-size:0.85rem;color:var(--primary);margin:10px 0;">Detail Tambahan (Opsional)</h4><div class="form-row"><div class="form-group"><label>Penanggung Jawab</label><input type="text" id="agendaPJ" placeholder="Nama PIC"></div><div class="form-group"><label>Pakaian</label><input type="text" id="agendaPakaian" placeholder="Contoh: PDH / Batik"></div></div><div class="form-row"><div class="form-group">
+    <label for="agendaPetugas">Petugas Menghadiri <small class="text-muted">(Pilih/Isi)</small></label>
+    
+    <!-- Predefined Options (Checkboxes) -->
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:10px;">
+        <small style="color:var(--gray);display:block;margin-bottom:8px;">✅ Pilih dari daftar:</small>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+            <label style="font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" class="petugas-check" value="Kakan Kemenag"> Kakan Kemenag
+            </label>
+            <label style="font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" class="petugas-check" value="Kasubag"> Kasubag
+            </label>
+            <label style="font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" class="petugas-check" value="Kasi PAIS"> Kasi PAIS
+            </label>
+            <label style="font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" class="petugas-check" value="Kasi PD.Pontren"> Kasi PD.Pontren
+            </label>
+            <label style="font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" class="petugas-check" value="Kasi Bimas"> Kasi Bimas
+            </label>
+            <label style="font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" class="petugas-check" value="Kasi Penmad"> Kasi Penmad
+            </label>
+            <label style="font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" class="petugas-check" value="Kasi Zawa"> Kasi Zawa
+            </label>
+        </div>
+    </div>
+    
+    <!-- Manual Input -->
+    <input type="text" id="agendaPetugasManual" placeholder="➕ Atau ketik nama petugas lain (pisahkan koma)" 
+           style="width:100%;padding:12px 15px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:0.95rem;">
+    
+    <!-- Hidden input untuk menyimpan nilai gabungan -->
+    <input type="hidden" id="agendaPetugas">
+    
+    <small class="text-muted" style="display:block;margin-top:6px;">
+        💡 Tips: Centang opsi di atas + ketik manual untuk gabungan. Contoh: "Staff, Seksi Humas"
+    </small>
+</div><div class="form-group"><label>Pejabat</label><input type="text" id="agendaPejabat" placeholder="Nama pejabat"></div></div><div class="form-group"><label>Keterangan</label><textarea id="agendaKeterangan" rows="3" placeholder="Catatan tambahan..."></textarea></div><div class="form-group"><label><input type="checkbox" id="sendWhatsApp" checked><i class="fab fa-whatsapp" style="color:#25D366;"></i> Kirim notifikasi via WhatsApp</label></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAgendaModal()">Batal</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>
 
     <!-- MODAL USER -->
     <div class="modal" id="userModal">
