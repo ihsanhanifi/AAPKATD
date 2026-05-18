@@ -482,12 +482,85 @@ async function exportAgenda(fmt) {
 window.generateDailyReport = function() {
     const dateInput = document.getElementById('reportDate').value;
     if (!dateInput) return showToast('Pilih tanggal terlebih dahulu', 'warning');
+    
     const dailyAgenda = allAgenda.filter(a => a.tanggal === dateInput);
     if (dailyAgenda.length === 0) return showToast('Tidak ada agenda pada tanggal tersebut.', 'info');
+    
     dailyAgenda.sort((a, b) => (a.waktu_mulai || '').localeCompare(b.waktu_mulai || ''));
     const fullDate = new Date(dateInput).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const printContent = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Laporan Agenda - ${fullDate}</title><style>@page { size: A4 landscape; margin: 1.5cm; }body { font-family: 'Segoe UI', sans-serif; color: #111; line-height: 1.4; padding: 0; margin: 0; background: #fff; }.container { max-width: 100%; margin: 0 auto; }.header { text-align: center; margin-bottom: 25px; border-bottom: 3px double #1a5632; padding-bottom: 15px; }.header h1 { margin: 0; color: #1a5632; font-size: 20px; text-transform: uppercase; }.header h2 { margin: 8px 0 0; color: #333; font-size: 16px; }.header p { margin: 5px 0 0; color: #555; font-size: 14px; }table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }th { background-color: #1a5632; color: #fff; padding: 10px 8px; text-align: center; border: 1px solid #1a5632; }td { border: 1px solid #ccc; padding: 8px; vertical-align: top; }tr:nth-child(even) { background-color: #f8f9fa; }.footer { margin-top: 30px; text-align: right; font-size: 12px; color: #444; }.no-print { text-align: center; margin-top: 40px; padding: 20px; background: #e9ecef; border-radius: 8px; }.btn-print { padding: 12px 25px; background: #1a5632; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; }@media print { body { padding: 0; } .no-print { display: none !important; } }</style></head><body><div class="container"><div class="header"><h1>Kementerian Agama Kabupaten Tanah Datar</h1><h2>LAPORAN REKAP AGENDA PIMPINAN</h2><p>Hari/Tanggal: ${fullDate}</p></div><table><thead><tr><th>No</th><th>Waktu</th><th>Nama Kegiatan</th><th>Tempat</th><th>PJ & Petugas</th><th>Pejabat</th><th>Ket & Pakaian</th></tr></thead><tbody>${dailyAgenda.map((a, i) => `<tr><td style="text-align:center;">${i + 1}</td><td style="text-align:center;">${a.waktu_mulai || '-'}<br><small>s/d ${a.waktu_selesai || '-'}</small></td><td><strong>${a.kegiatan || '-'}</strong></td><td>${a.tempat || '-'}</td><td>${a.penanggung_jawab || '-'}<br><small>${a.petugas || ''}</small></td><td>${a.pejabat || '-'}</td><td>${a.keterangan || '-'}<br><small>${a.pakaian || ''}</small></td></tr>`).join('')}</tbody></table><div class="footer"><p>Dicetak oleh: ${currentUser ? currentUser.nama_lengkap : 'Admin'}</p><p>Waktu Cetak: ${new Date().toLocaleString('id-ID')}</p></div></div><div class="no-print"><button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button></div></body></html>`;
-    const printWindow = window.open('', '_blank'); printWindow.document.write(printContent); printWindow.document.close();
+    
+    const printContent = `<!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <title>Laporan Agenda - ${fullDate}</title>
+        <style>
+            @page { size: A4 landscape; margin: 1.5cm; }
+            body { font-family: 'Segoe UI', sans-serif; color: #111; line-height: 1.4; padding: 0; margin: 0; background: #fff; }
+            .container { max-width: 100%; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 25px; border-bottom: 3px double #1a5632; padding-bottom: 15px; }
+            .header h1 { margin: 0; color: #1a5632; font-size: 20px; text-transform: uppercase; }
+            .header h2 { margin: 8px 0 0; color: #333; font-size: 16px; }
+            .header p { margin: 5px 0 0; color: #555; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+            th { background-color: #1a5632; color: #fff; padding: 10px 8px; text-align: center; border: 1px solid #1a5632; }
+            td { border: 1px solid #ccc; padding: 8px; vertical-align: top; }
+            tr:nth-child(even) { background-color: #f8f9fa; }
+            .footer { margin-top: 30px; text-align: right; font-size: 12px; color: #444; }
+            .no-print { text-align: center; margin-top: 40px; padding: 20px; background: #e9ecef; border-radius: 8px; }
+            .btn-print { padding: 12px 25px; background: #1a5632; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; }
+            @media print { body { padding: 0; } .no-print { display: none !important; } }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Kementerian Agama Kabupaten Tanah Datar</h1>
+                <h2>LAPORAN REKAP AGENDA PIMPINAN</h2>
+                <p>Hari/Tanggal: ${fullDate}</p>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Waktu</th>
+                        <th>Nama Kegiatan</th>
+                        <th>Tempat</th>
+                        <th>Penanggung Jawab</th>
+                        <th>Petugas</th>
+                        <th>Pejabat</th>
+                        <th>Ket & Pakaian</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dailyAgenda.map((a, i) => `
+                        <tr>
+                            <td style="text-align:center;">${i + 1}</td>
+                            <td style="text-align:center;">${a.waktu_mulai || '-'}<br><small>s/d ${a.waktu_selesai || '-'}</small></td>
+                            <td><strong>${a.kegiatan || '-'}</strong></td>
+                            <td>${a.tempat || '-'}</td>
+                            <td>${a.penanggung_jawab || '-'}</td>
+                            <td><strong>${a.petugas || '-'}</strong></td>
+                            <td>${a.pejabat || '-'}</td>
+                            <td>${a.keterangan || '-'}<br><small>${a.pakaian || ''}</small></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div class="footer">
+                <p>Dicetak oleh: ${currentUser ? currentUser.nama_lengkap : 'Admin'}</p>
+                <p>Waktu Cetak: ${new Date().toLocaleString('id-ID')}</p>
+            </div>
+        </div>
+        <div class="no-print">
+            <button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
+        </div>
+    </body>
+    </html>`;
+
+    const printWindow = window.open('', '_blank'); 
+    printWindow.document.write(printContent); 
+    printWindow.document.close();
 }
 
 function loadSettings(){ document.getElementById('waMode').value = localStorage.getItem('waMode') || 'contact'; document.getElementById('waNumbers').value = localStorage.getItem('waNumbers') || ''; document.getElementById('waNumberInput').style.display = document.getElementById('waMode').value === 'number' ? 'block' : 'none'; }
