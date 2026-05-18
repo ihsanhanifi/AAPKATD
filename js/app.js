@@ -160,16 +160,18 @@ petugas: getPetugasValue(), pejabat: document.getElementById('agendaPejabat').va
     if(res.status==='success'){showToast(res.message,'success');closeAgendaModal();if(!id&&wantWA&&res.data?.id)sendWhatsAppDirect({...p,id:res.data.id});await loadAgenda();}
 }
 
+// ✅ buildSingleMessage - untuk kirim 1 agenda
 function buildSingleMessage(a) {
     let msg = `${E.building} *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n${E.line}\n📋 *AGENDA KEGIATAN PIMPINAN*\n\n`;
-    msg += `${E.date} *Tanggal:* ${(formatDate(a.tanggal) || '-')}\n${E.clock} *Waktu:* ${((a.waktu_mulai || '-') + " - " + (a.waktu_selesai || '-'))}\n${E.pin} *Tempat/Lokasi:* ${(a.tempat || '-')}\n\n`;
+    msg += `${E.date} *Tanggal:* ${(formatDate(a.tanggal) || '-')}\n${E.clock} *Waktu:* ${((a.waktu_mulai || '-') + ` - ` + (a.waktu_selesai || '-'))}\n${E.pin} *Tempat/Lokasi:* ${(a.tempat || '-')}\n\n`;
     msg += `${E.doc} *Nama Kegiatan:*\n*${(a.kegiatan || '-')}*\n\n`;
-    msg += `${E.user} *Penanggung Jawab:* ${(a.penanggung_jawab || '-')}\n${E.shirt} *Pakaian:* ${(a.pakaian || '-')}\n${E.group} *Petugas:* ${(a.petugas || '-')}\n${E.medal} *Pejabat:* ${(a.pejabat || '-')}\n\n`;
+    msg += `${E.user} *Penanggung Jawab:* ${(a.penanggung_jawab || '-')}\n${E.shirt} *Pakaian:* ${(a.pakaian || '-')}\n*${E.group} Petugas:* *${(a.petugas || '-')}*\n${E.medal} *Pejabat:* ${(a.pejabat || '-')}\n\n`;
     msg += `${E.note} *Keterangan:* ${(a.keterangan || '-')}\n${E.line}\n`;
     msg += `${E.user} *Input oleh:* ${((currentUser && currentUser.username) || 'Admin')}\n_Mohon kehadiran tepat waktu._\n_Terima kasih._`;
     return msg;
 }
 
+// ✅ buildBulkMessage - untuk kirim banyak agenda
 function buildBulkMessage(list) {
     let msg = `${E.building} *KEMENTERIAN AGAMA KAB. TANAH DATAR*\n${E.line}\n📋 *AGENDA KEGIATAN PIMPINAN (TERPILIH: ${list.length})*\n\n`;
     list.forEach((a, i) => {
@@ -178,7 +180,7 @@ function buildBulkMessage(list) {
         msg += `${E.pin} *Tempat:* ${(a.tempat || '-')}\n`;
         if (a.penanggung_jawab?.trim()) msg += `${E.user} *PJ:* ${a.penanggung_jawab}\n`;
         if (a.pakaian?.trim()) msg += `${E.shirt} *Pakaian:* ${a.pakaian}\n`;
-        if (a.petugas?.trim()) msg += `${E.group} *Petugas:* ${a.petugas}\n`;
+        if (a.petugas?.trim()) msg += `*${E.group} Petugas:* *${a.petugas}*\n`;
         if (a.pejabat?.trim()) msg += `${E.medal} *Pejabat:* ${a.pejabat}\n`;
         msg += `${E.divider}\n`;
     });
@@ -228,41 +230,33 @@ window.sendSelectedAgendas = function() {
 }
 
 function renderAgendaTable() {
-    const tbody = document.querySelector('#agendaTable tbody'); 
-    if(!tbody) return; 
-    tbody.innerHTML = ''; 
-    
-    if(!allAgenda.length) {
-        // colspan disesuaikan dari 9 menjadi 10 karena penambahan kolom Petugas
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Tidak ada data agenda</td></tr>';
+    const tbody=document.querySelector('#agendaTable tbody'); 
+    if(!tbody)return; 
+    tbody.innerHTML=''; 
+    if(!allAgenda.length){
+        tbody.innerHTML='<tr><td colspan="10" class="text-center text-muted">Tidak ada data agenda</td></tr>';
         return;
     }
-    
-    const s = [...allAgenda].sort((a,b) => (a.tanggal||'').localeCompare(b.tanggal||'') || (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
-    const td = new Date().toISOString().split('T')[0];
-    
-    s.forEach((a, i) => {
+    const s=[...allAgenda].sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||'')), 
+    td=new Date().toISOString().split('T')[0];
+    s.forEach((a,i)=>{
         const isSelesai = a.status === 'selesai';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><input type="checkbox" class="agenda-check write-access" value="${a.id}"></td>
-            <td>${i+1}</td>
-            <td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
-            <td>${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td>
-            <td>${a.kegiatan||'-'}</td>
-            <td>${a.tempat||'-'}</td>
-            <td><div style="font-size:0.85rem;">👥 ${a.petugas||'-'}</div></td> <!-- ✅ Data Petugas -->
-            <td>${a.dibuat_oleh||'-'}</td>
-            <td><span class="badge ${isSelesai?'badge-danger':'badge-success'}">${isSelesai?'Selesai':'Aktif'}</span></td>
-            <td class="write-access">
-                <div class="action-btns">
-                    <button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button>
-                    <button class="btn btn-warning btn-sm" onclick="editAgenda('${a.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteAgenda('${a.id}')"><i class="fas fa-trash"></i></button>
-                </div>
-            </td>
-        `;
-        if(isSelesai) tr.style.opacity = '0.7'; 
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td><input type="checkbox" class="agenda-check write-access" value="${a.id}"></td>
+        <td>${i+1}</td>
+        <td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
+        <td>${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td>
+        <td>${a.kegiatan||'-'}</td>
+        <td>${a.tempat||'-'}</td>
+        <td><div style="font-size:0.85rem;"><b>👥 Petugas:</b> <b>${a.petugas||'-'}</b></div></td>
+        <td>${a.dibuat_oleh||'-'}</td>
+        <td><span class="badge ${isSelesai?'badge-danger':'badge-success'}">${isSelesai?'Selesai':'Aktif'}</span></td>
+        <td class="write-access"><div class="action-btns">
+            <button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button>
+            <button class="btn btn-warning btn-sm" onclick="editAgenda('${a.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAgenda('${a.id}')"><i class="fas fa-trash"></i></button>
+        </div></td>`;
+        if(isSelesai) tr.style.opacity='0.7'; 
         tbody.appendChild(tr);
     });
 }
@@ -402,33 +396,30 @@ window.editUser=function(u){openUserModal(u);};
 window.deleteUser=async function(u){if(!confirm(`Hapus user ${u}?`))return;const res=await api('deleteUser',{username:u});if(res.status==='success'){showToast(res.message,'success');loadUsers();}};
 
 async function loadDashboard(){ const td=new Date().toISOString().split('T')[0],we=new Date();we.setDate(we.getDate()+7);const weS=we.toISOString().split('T')[0],mS=td.substring(0,7)+'-01'; const active=allAgenda.filter(a=>a.status!=='selesai'); document.getElementById('statTotal').textContent=active.length; document.getElementById('statToday').textContent=active.filter(a=>a.tanggal===td).length; document.getElementById('statWeek').textContent=active.filter(a=>a.tanggal>=td&&a.tanggal<=weS).length; document.getElementById('statMonth').textContent=active.filter(a=>a.tanggal>=mS).length; renderUpcomingTable(); }
-function renderUpcomingTable(){
-    const tbody = document.querySelector('#upcomingTable tbody');
-    if(!tbody) return;
-    tbody.innerHTML = '';
-    const td = new Date().toISOString().split('T')[0];
-    const up = allAgenda.filter(a => a.status!=='selesai' && a.tanggal && a.tanggal >= td)
-        .sort((a,b) => (a.tanggal||'').localeCompare(b.tanggal||'') || (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''))
-        .slice(0,5);
-        
-    document.getElementById('upcomingTitle').textContent = up.length > 0 ? `${up.length} Agenda Mendatang` : 'Agenda Mendatang';
+function renderUpcomingTable(){ 
+    const tbody=document.querySelector('#upcomingTable tbody');
+    if(!tbody)return;
+    tbody.innerHTML=''; 
+    const td=new Date().toISOString().split('T')[0]; 
+    const up=allAgenda.filter(a=>a.status!=='selesai' && a.tanggal && a.tanggal >=td)
+        .sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||''))
+        .slice(0,5); 
+    document.getElementById('upcomingTitle').textContent = up.length > 0 ? `${up.length} Agenda Mendatang` : 'Agenda Mendatang'; 
     
     if(!up.length){
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted"><i class="fas fa-calendar-check fa-2x mb-2"></i><br>Tidak ada agenda mendatang</td></tr>';
+        tbody.innerHTML='<tr><td colspan="7" class="text-center text-muted"><i class="fas fa-calendar-check fa-2x mb-2"></i><br>Tidak ada agenda mendatang</td></tr>';
         return;
-    }
+    } 
     
-    up.forEach(a => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
-            <td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td>
-            <td><strong>${a.kegiatan||'-'}</strong></td>
-            <td>${a.tempat||'-'}</td>
-            <td><div style="font-size:0.85rem;">👤 ${a.penanggung_jawab||'-'} ${a.pakaian?`<br><span class="badge badge-info" style="font-size:0.7rem;">👔 ${a.pakaian}</span>`:''}</div></td>
-            <td><div style="font-size:0.85rem;">👥 ${a.petugas||'-'}</div></td>
-            <td class="write-access"><button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button></td>
-        `;
+    up.forEach(a=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
+        <td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td>
+        <td><strong>${a.kegiatan||'-'}</strong></td>
+        <td>${a.tempat||'-'}</td>
+        <td><div style="font-size:0.85rem;">👤 ${a.penanggung_jawab||'-'} ${a.pakaian?`<br><span class="badge badge-info" style="font-size:0.7rem;">👔 ${a.pakaian}</span>`:''}</div></td>
+        <td><div style="font-size:0.85rem;"><b>👥 Petugas:</b> <b>${a.petugas||'-'}</b></div></td>
+        <td class="write-access"><button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -462,8 +453,8 @@ function showCalendarEvents(ds){
     body.innerHTML = ags.length 
         ? ags.map(a => `
             <div class="calendar-event-item">
-                <strong>${a.waktu_mulai || '-'} - ${a.waktu_selesai || '-'}</strong> | ${a.kegiatan || '-'}
-                <br><small class="text-muted">📍 ${a.tempat || '-'} | 👥 <b>Petugas:</b> ${a.petugas || '-'}</small>
+                <strong>${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</strong> | ${a.kegiatan||'-'}
+                <br><small class="text-muted">📍 ${a.tempat||'-'} | <b>👥 Petugas:</b> <b>${a.petugas||'-'}</b></small>
             </div>
         `).join('')
         : '<p class="text-muted">Tidak ada agenda</p>';
