@@ -45,6 +45,13 @@ if(togglePwd) {
             e.preventDefault();
             handleUserSubmit();
         });
+        // Tambahkan di dalam setupEvents(), setelah event listener lainnya:
+document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('petugas-check') || e.target.id === 'agendaPetugasManual') {
+        const hidden = document.getElementById('agendaPetugas');
+        if (hidden) hidden.value = getPetugasValue();
+    }
+});
     }
 
     document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); const page=link.dataset.page; if(page) window.navigateTo(page); }));
@@ -146,7 +153,8 @@ async function loadAgenda() {
 
 async function handleAgendaSubmit(e) {
     e.preventDefault(); const id=document.getElementById('agendaId').value; 
-    const p = { tanggal: document.getElementById('agendaTanggal').value, waktu_mulai: document.getElementById('agendaWaktuMulai').value, waktu_selesai: document.getElementById('agendaWaktuSelesai').value, kegiatan: document.getElementById('agendaKegiatan').value, tempat: document.getElementById('agendaTempat').value, penanggung_jawab: document.getElementById('agendaPJ').value, pakaian: document.getElementById('agendaPakaian').value, petugas: document.getElementById('agendaPetugas').value, pejabat: document.getElementById('agendaPejabat').value, keterangan: document.getElementById('agendaKeterangan').value, dibuat_oleh: currentUser.username }; 
+    const p = { tanggal: document.getElementById('agendaTanggal').value, waktu_mulai: document.getElementById('agendaWaktuMulai').value, waktu_selesai: document.getElementById('agendaWaktuSelesai').value, kegiatan: document.getElementById('agendaKegiatan').value, tempat: document.getElementById('agendaTempat').value, penanggung_jawab: document.getElementById('agendaPJ').value, pakaian: document.getElementById('agendaPakaian').value,// ✅ GANTI dengan:
+petugas: getPetugasValue(), pejabat: document.getElementById('agendaPejabat').value, keterangan: document.getElementById('agendaKeterangan').value, dibuat_oleh: currentUser.username }; 
     const wantWA=document.getElementById('sendWhatsApp')?.checked;
     let res; if(id){p.id=id;res=await api('updateAgenda',p);} else {res=await api('addAgenda',p);}
     if(res.status==='success'){showToast(res.message,'success');closeAgendaModal();if(!id&&wantWA&&res.data?.id)sendWhatsAppDirect({...p,id:res.data.id});await loadAgenda();}
@@ -259,7 +267,7 @@ function renderAgendaTable() {
     });
 }
 
-function openAgendaModal(id=null){document.getElementById('agendaModal').classList.add('active');document.getElementById('agendaModalTitle').textContent=id?'Edit Agenda':'Tambah Agenda';document.getElementById('agendaForm').reset();document.getElementById('agendaId').value='';document.getElementById('agendaTanggal').value=new Date().toISOString().split('T')[0];if(id){const a=allAgenda.find(x=>x.id===id);if(!a)return showToast('Data tidak ditemukan','error');document.getElementById('agendaId').value=a.id;document.getElementById('agendaTanggal').value=a.tanggal;document.getElementById('agendaWaktuMulai').value=a.waktu_mulai;document.getElementById('agendaWaktuSelesai').value=a.waktu_selesai;document.getElementById('agendaKegiatan').value=a.kegiatan;document.getElementById('agendaTempat').value=a.tempat;document.getElementById('agendaPJ').value=a.penanggung_jawab||'';document.getElementById('agendaPakaian').value=a.pakaian||'';document.getElementById('agendaPetugas').value=a.petugas||'';document.getElementById('agendaPejabat').value=a.pejabat||'';document.getElementById('agendaKeterangan').value=a.keterangan||'';}}
+function openAgendaModal(id=null){document.getElementById('agendaModal').classList.add('active');document.getElementById('agendaModalTitle').textContent=id?'Edit Agenda':'Tambah Agenda';document.getElementById('agendaForm').reset();document.getElementById('agendaId').value='';document.getElementById('agendaTanggal').value=new Date().toISOString().split('T')[0];if(id){const a=allAgenda.find(x=>x.id===id);if(!a)return showToast('Data tidak ditemukan','error');document.getElementById('agendaId').value=a.id;document.getElementById('agendaTanggal').value=a.tanggal;document.getElementById('agendaWaktuMulai').value=a.waktu_mulai;document.getElementById('agendaWaktuSelesai').value=a.waktu_selesai;document.getElementById('agendaKegiatan').value=a.kegiatan;document.getElementById('agendaTempat').value=a.tempat;document.getElementById('agendaPJ').value=a.penanggung_jawab||'';document.getElementById('agendaPakaian').value=a.pakaian||'';setPetugasValue(a.petugas || '');document.getElementById('agendaPejabat').value=a.pejabat||'';document.getElementById('agendaKeterangan').value=a.keterangan||'';}}
 function closeAgendaModal(){document.getElementById('agendaModal').classList.remove('active');}
 window.editAgenda=function(id){openAgendaModal(id);};
 window.deleteAgenda=async function(id){if(!confirm('Hapus agenda ini?'))return;const res=await api('deleteAgenda',{id});if(res.status==='success'){showToast(res.message,'success');loadAgenda();}};
@@ -499,3 +507,40 @@ function updateClock(){const n=new Date();const o={weekday:'long',year:'numeric'
 function formatDate(ds){if(!ds)return'-';if(ds instanceof Date){const d=ds.getDate(),m=ds.getMonth(),y=ds.getFullYear();const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${d} ${mo[m]} ${y}`;}const p=String(ds).trim().split(/[-T]/);if(p.length>=3){const[y,m,d]=p;const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${parseInt(d,10)} ${mo[parseInt(m,10)-1]} ${y}`;}return String(ds);}
 
 window.navigateTo=window.navigateTo||navigateTo; window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect; window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById; window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect; window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda; window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas; window.editAgenda=window.editAgenda||editAgenda; window.deleteAgenda=window.deleteAgenda||deleteAgenda; window.openAgendaModal=window.openAgendaModal||openAgendaModal; window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal; window.loadAgenda=window.loadAgenda||loadAgenda; window.changeMonth=window.changeMonth||changeMonth; window.openUserModal=window.openUserModal||openUserModal; window.closeUserModal=window.closeUserModal||closeUserModal; window.editUser=window.editUser||editUser; window.deleteUser=window.deleteUser||deleteUser; window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser; window.allowLoginUser=window.allowLoginUser||allowLoginUser; window.confirmImport=window.confirmImport||confirmImport; window.exportAgenda=window.exportAgenda||exportAgenda; window.saveWaSettings=window.saveWaSettings||saveWaSettings; window.generateDailyReport=window.generateDailyReport||generateDailyReport;
+
+// 🔄 Helper: Ambil nilai Petugas (checkboxes + manual)
+function getPetugasValue() {
+    const checked = Array.from(document.querySelectorAll('.petugas-check:checked')).map(cb => cb.value);
+    const manual = document.getElementById('agendaPetugasManual')?.value.trim() || '';
+    const manualArr = manual ? manual.split(',').map(s => s.trim()).filter(s => s) : [];
+    const combined = [...new Set([...checked, ...manualArr])]; // Unique values
+    return combined.join(', ');
+}
+
+// 🔄 Helper: Set nilai Petugas ke form (untuk edit)
+function setPetugasValue(value) {
+    // Reset checkboxes
+    document.querySelectorAll('.petugas-check').forEach(cb => cb.checked = false);
+    
+    if (!value) {
+        if (document.getElementById('agendaPetugasManual')) document.getElementById('agendaPetugasManual').value = '';
+        if (document.getElementById('agendaPetugas')) document.getElementById('agendaPetugas').value = '';
+        return;
+    }
+    
+    const items = String(value).split(',').map(s => s.trim()).filter(s => s);
+    const predefined = ['Kakan Kemenag', 'Kasubag', 'Kasi PAIS', 'Kasi PD.Pontren', 'Kasi Bimas', 'Kasi Penmad', 'Kasi Zawa'];
+    
+    items.forEach(item => {
+        // Cek checkbox jika ada di predefined
+        if (predefined.includes(item)) {
+            const cb = document.querySelector(`.petugas-check[value="${item}"]`);
+            if (cb) cb.checked = true;
+        }
+    });
+    
+    // Input manual: tampilkan item yang tidak ada di predefined
+    const manualOnly = items.filter(i => !predefined.includes(i)).join(', ');
+    if (document.getElementById('agendaPetugasManual')) document.getElementById('agendaPetugasManual').value = manualOnly;
+    if (document.getElementById('agendaPetugas')) document.getElementById('agendaPetugas').value = items.join(', ');
+}
