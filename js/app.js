@@ -220,13 +220,42 @@ window.sendSelectedAgendas = function() {
 }
 
 function renderAgendaTable() {
-    const tbody=document.querySelector('#agendaTable tbody'); if(!tbody)return; tbody.innerHTML=''; if(!allAgenda.length){tbody.innerHTML='<tr><td colspan="9" class="text-center text-muted">Tidak ada data agenda</td></tr>';return;}
-    const s=[...allAgenda].sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||'')), td=new Date().toISOString().split('T')[0];
-    s.forEach((a,i)=>{ 
-        const isSelesai = a.status === 'selesai'; 
-        const tr=document.createElement('tr'); 
-        tr.innerHTML=`<td><input type="checkbox" class="agenda-check write-access" value="${a.id}"></td><td>${i+1}</td><td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td><td>${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td><td>${a.kegiatan||'-'}</td><td>${a.tempat||'-'}</td><td>${a.dibuat_oleh||'-'}</td><td><span class="badge ${isSelesai?'badge-danger':'badge-success'}">${isSelesai?'Selesai':'Aktif'}</span></td><td class="write-access"><div class="action-btns"><button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button><button class="btn btn-warning btn-sm" onclick="editAgenda('${a.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-danger btn-sm" onclick="deleteAgenda('${a.id}')"><i class="fas fa-trash"></i></button></div></td>`; 
-        if(isSelesai) tr.style.opacity='0.7'; tbody.appendChild(tr); 
+    const tbody = document.querySelector('#agendaTable tbody'); 
+    if(!tbody) return; 
+    tbody.innerHTML = ''; 
+    
+    if(!allAgenda.length) {
+        // colspan disesuaikan dari 9 menjadi 10 karena penambahan kolom Petugas
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Tidak ada data agenda</td></tr>';
+        return;
+    }
+    
+    const s = [...allAgenda].sort((a,b) => (a.tanggal||'').localeCompare(b.tanggal||'') || (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
+    const td = new Date().toISOString().split('T')[0];
+    
+    s.forEach((a, i) => {
+        const isSelesai = a.status === 'selesai';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="checkbox" class="agenda-check write-access" value="${a.id}"></td>
+            <td>${i+1}</td>
+            <td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
+            <td>${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td>
+            <td>${a.kegiatan||'-'}</td>
+            <td>${a.tempat||'-'}</td>
+            <td><div style="font-size:0.85rem;">👥 ${a.petugas||'-'}</div></td> <!-- ✅ Data Petugas -->
+            <td>${a.dibuat_oleh||'-'}</td>
+            <td><span class="badge ${isSelesai?'badge-danger':'badge-success'}">${isSelesai?'Selesai':'Aktif'}</span></td>
+            <td class="write-access">
+                <div class="action-btns">
+                    <button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button>
+                    <button class="btn btn-warning btn-sm" onclick="editAgenda('${a.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteAgenda('${a.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        `;
+        if(isSelesai) tr.style.opacity = '0.7'; 
+        tbody.appendChild(tr);
     });
 }
 
