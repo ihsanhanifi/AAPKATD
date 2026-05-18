@@ -23,6 +23,19 @@ document.addEventListener('DOMContentLoaded', () => { checkLogin(); setupEvents(
 
 function setupEvents() {
     const loginForm = document.getElementById('loginForm'); if(loginForm) loginForm.addEventListener('submit', e => { e.preventDefault(); handleLogin(e); });
+    // ============================================
+// 🔑 FITUR EYE TOGGLE PASSWORD LOGIN
+// ============================================
+const togglePwd = document.getElementById('togglePassword');
+if(togglePwd) {
+    togglePwd.addEventListener('click', () => {
+        const pwd = document.getElementById('loginPassword');
+        const isPassword = pwd.type === 'password';
+        pwd.type = isPassword ? 'text' : 'password';
+        togglePwd.classList.toggle('fa-eye', !isPassword);
+        togglePwd.classList.toggle('fa-eye-slash', isPassword);
+    });
+}
     const logoutBtn = document.getElementById('logoutBtn'); if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     const agendaForm = document.getElementById('agendaForm'); if(agendaForm) agendaForm.addEventListener('submit', e => { e.preventDefault(); handleAgendaSubmit(e); });
     
@@ -352,7 +365,36 @@ window.editUser=function(u){openUserModal(u);};
 window.deleteUser=async function(u){if(!confirm(`Hapus user ${u}?`))return;const res=await api('deleteUser',{username:u});if(res.status==='success'){showToast(res.message,'success');loadUsers();}};
 
 async function loadDashboard(){ const td=new Date().toISOString().split('T')[0],we=new Date();we.setDate(we.getDate()+7);const weS=we.toISOString().split('T')[0],mS=td.substring(0,7)+'-01'; const active=allAgenda.filter(a=>a.status!=='selesai'); document.getElementById('statTotal').textContent=active.length; document.getElementById('statToday').textContent=active.filter(a=>a.tanggal===td).length; document.getElementById('statWeek').textContent=active.filter(a=>a.tanggal>=td&&a.tanggal<=weS).length; document.getElementById('statMonth').textContent=active.filter(a=>a.tanggal>=mS).length; renderUpcomingTable(); }
-function renderUpcomingTable(){ const tbody=document.querySelector('#upcomingTable tbody');if(!tbody)return;tbody.innerHTML=''; const td=new Date().toISOString().split('T')[0]; const up=allAgenda.filter(a=>a.status!=='selesai' && a.tanggal && a.tanggal>=td).sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||'')).slice(0,5); document.getElementById('upcomingTitle').textContent = up.length > 0 ? `${up.length} Agenda Mendatang` : 'Agenda Mendatang'; if(!up.length){tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted"><i class="fas fa-calendar-check fa-2x mb-2"></i><br>Tidak ada agenda mendatang</td></tr>';return;} up.forEach(a=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td><td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td><td><strong>${a.kegiatan||'-'}</strong></td><td>${a.tempat||'-'}</td><td><div style="font-size:0.85rem;">👤 ${a.penanggung_jawab||'-'} ${a.pakaian?`<br><span class="badge badge-info" style="font-size:0.7rem;">👔 ${a.pakaian}</span>`:''}</div></td><td class="write-access"><button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button></td>`;tbody.appendChild(tr);});}
+function renderUpcomingTable(){
+    const tbody = document.querySelector('#upcomingTable tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    const td = new Date().toISOString().split('T')[0];
+    const up = allAgenda.filter(a => a.status!=='selesai' && a.tanggal && a.tanggal >= td)
+        .sort((a,b) => (a.tanggal||'').localeCompare(b.tanggal||'') || (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''))
+        .slice(0,5);
+        
+    document.getElementById('upcomingTitle').textContent = up.length > 0 ? `${up.length} Agenda Mendatang` : 'Agenda Mendatang';
+    
+    if(!up.length){
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted"><i class="fas fa-calendar-check fa-2x mb-2"></i><br>Tidak ada agenda mendatang</td></tr>';
+        return;
+    }
+    
+    up.forEach(a => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
+            <td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td>
+            <td><strong>${a.kegiatan||'-'}</strong></td>
+            <td>${a.tempat||'-'}</td>
+            <td><div style="font-size:0.85rem;">👤 ${a.penanggung_jawab||'-'} ${a.pakaian?`<br><span class="badge badge-info" style="font-size:0.7rem;">👔 ${a.pakaian}</span>`:''}</div></td>
+            <td><div style="font-size:0.85rem;">👥 ${a.petugas||'-'}</div></td>
+            <td class="write-access"><button class="btn btn-info btn-sm" onclick="sendWhatsAppById('${a.id}')" title="Kirim WA"><i class="fab fa-whatsapp"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 
 function renderCalendar(){
     const y=calendarDate.getFullYear(), m=calendarDate.getMonth();
@@ -374,7 +416,21 @@ function renderCalendar(){
 }
 
 window.changeMonth=function(dir){calendarDate.setMonth(calendarDate.getMonth()+dir);renderCalendar();};
-function showCalendarEvents(ds){document.getElementById('selectedDate').textContent=formatDate(ds);const body=document.getElementById('calendarEventsBody');if(!body)return;const ags=allAgenda.filter(a=>a.tanggal===ds);body.innerHTML=ags.length?ags.map(a=>`<div class="calendar-event-item"><strong>${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</strong> | ${a.kegiatan||'-'}<br><small class="text-muted">📍 ${a.tempat||'-'}</small></div>`).join(''):'<p class="text-muted">Tidak ada agenda</p>';}
+function showCalendarEvents(ds){
+    document.getElementById('selectedDate').textContent = formatDate(ds);
+    const body = document.getElementById('calendarEventsBody');
+    if(!body) return;
+    const ags = allAgenda.filter(a => a.tanggal === ds);
+    
+    body.innerHTML = ags.length 
+        ? ags.map(a => `
+            <div class="calendar-event-item">
+                <strong>${a.waktu_mulai || '-'} - ${a.waktu_selesai || '-'}</strong> | ${a.kegiatan || '-'}
+                <br><small class="text-muted">📍 ${a.tempat || '-'} | 👥 <b>Petugas:</b> ${a.petugas || '-'}</small>
+            </div>
+        `).join('')
+        : '<p class="text-muted">Tidak ada agenda</p>';
+}
 
 function handleImportFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=(ev)=>{try{importData=JSON.parse(ev.target.result);document.getElementById('importPreview').style.display='block';document.getElementById('importPreviewContent').innerHTML=`<p>✅ Siap impor: <b>${importData.length}</b> data</p>`;showToast('File siap. Klik Konfirmasi.','info');}catch{showToast('Format JSON salah','error');}};r.readAsText(f);}
 async function confirmImport(){if(!importData)return;const res=await api('importAgenda',{agendaData:importData});if(res.status==='success'){showToast(res.message,'success');document.getElementById('importPreview').style.display='none';importData=null;document.getElementById('importFile').value='';loadAgenda();}}
