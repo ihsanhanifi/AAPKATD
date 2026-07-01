@@ -2,7 +2,7 @@
 // AGENDA PIMPINAN - FRONTEND JS (CLEAN & FIXED)
 // ============================================
 
-const API_URL = 'https://script.gogle.com/macros/s/AKfycbymrRxD3Q3t1IkFISFCRol0la4RqyOVdyhvmm0vKTMNs65BjJeSRTKWUc2AGtFjCeXV7w/exec';
+const API_URL = 'https://script.gogle.com/macros/s/KfycbymrRxD3Q3t1IkFISFCRol0la4RqyOVdyhvmm0vKTMNs65BjJeSRTKWUc2AGtFjCeXV7w/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
 let idleTimer;
 const SESSION_TIMEOUT = 10 * 60 * 1000;
