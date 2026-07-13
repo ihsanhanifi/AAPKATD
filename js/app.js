@@ -1,8 +1,8 @@
 // ============================================
-// AGENDA PIMPINAN - FRONTEND JS (CLEAN & FIXED)
+// AGENDA PIMPINAN - FRONTEND JS (ENHANCED & FIXED)
 // ============================================
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbymrRxD3Q3t1IkFISFCRol0la4RqyOVdyhvmm0vKTMNs65BjJeSRTKWUc2AGtFjCeXV7w/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzQfHjSTvxE9WkAYpatsLq2x1_mtxtmT1B-BWAS6DfaZoT3X8cdbzNgeoKYXQBNu-u2/exec';
 let currentUser = null, allAgenda = [], calendarDate = new Date(), importData = null;
 let idleTimer;
 const SESSION_TIMEOUT = 10 * 60 * 1000;
@@ -23,19 +23,19 @@ document.addEventListener('DOMContentLoaded', () => { checkLogin(); setupEvents(
 
 function setupEvents() {
     const loginForm = document.getElementById('loginForm'); if(loginForm) loginForm.addEventListener('submit', e => { e.preventDefault(); handleLogin(e); });
-    // ============================================
-// 🔑 FITUR EYE TOGGLE PASSWORD LOGIN
-// ============================================
-const togglePwd = document.getElementById('togglePassword');
-if(togglePwd) {
-    togglePwd.addEventListener('click', () => {
-        const pwd = document.getElementById('loginPassword');
-        const isPassword = pwd.type === 'password';
-        pwd.type = isPassword ? 'text' : 'password';
-        togglePwd.classList.toggle('fa-eye', !isPassword);
-        togglePwd.classList.toggle('fa-eye-slash', isPassword);
-    });
-}
+    
+    // 🔑 FITUR EYE TOGGLE PASSWORD LOGIN
+    const togglePwd = document.getElementById('togglePassword');
+    if(togglePwd) {
+        togglePwd.addEventListener('click', () => {
+            const pwd = document.getElementById('loginPassword');
+            const isPassword = pwd.type === 'password';
+            pwd.type = isPassword ? 'text' : 'password';
+            togglePwd.classList.toggle('fa-eye', !isPassword);
+            togglePwd.classList.toggle('fa-eye-slash', isPassword);
+        });
+    }
+    
     const logoutBtn = document.getElementById('logoutBtn'); if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     const agendaForm = document.getElementById('agendaForm'); if(agendaForm) agendaForm.addEventListener('submit', e => { e.preventDefault(); handleAgendaSubmit(e); });
     
@@ -45,14 +45,15 @@ if(togglePwd) {
             e.preventDefault();
             handleUserSubmit();
         });
-        // Tambahkan di dalam setupEvents(), setelah event listener lainnya:
-document.addEventListener('change', (e) => {
-    if (e.target.classList.contains('petugas-check') || e.target.id === 'agendaPetugasManual') {
-        const hidden = document.getElementById('agendaPetugas');
-        if (hidden) hidden.value = getPetugasValue();
     }
-});
-    }
+    
+    // Event listener untuk petugas checkbox
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('petugas-check') || e.target.id === 'agendaPetugasManual') {
+            const hidden = document.getElementById('agendaPetugas');
+            if (hidden) hidden.value = getPetugasValue();
+        }
+    });
 
     document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); const page=link.dataset.page; if(page) window.navigateTo(page); }));
     document.getElementById('btnViewAllAgenda')?.addEventListener('click', e => { e.preventDefault(); window.navigateTo('agenda'); });
@@ -123,17 +124,78 @@ function showApp() {
 
 async function checkMySession() { if(!currentUser) return; const res = await api('checkMySession', {username: currentUser.username}, { skipLoading: true }); if(res.status==='success' && res.data?.force_logout) { showToast('⚠️ Sesi Anda telah diakhiri oleh Admin.', 'warning'); setTimeout(() => handleLogout(), 1500); } }
 
+// ============================================
+// 🆕 AUTO-FILTER BULAN SAAT INI
+// ============================================
+function autoFilterCurrentMonth() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    
+    // Set tanggal awal bulan
+    const startDate = `${year}-${month}-01`;
+    const startEl = document.getElementById('filterStartDate');
+    if (startEl) startEl.value = startDate;
+    
+    // Set tanggal akhir bulan
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+    const endEl = document.getElementById('filterEndDate');
+    if (endEl) endEl.value = endDate;
+    
+    // Tampilkan notifikasi
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    showToast(`📅 Menampilkan agenda ${monthNames[now.getMonth()]} ${year}`, 'info', 2500);
+}
+
+// 🆕 RESET FILTER - Kembali ke bulan saat ini
+window.resetFilter = function() {
+    autoFilterCurrentMonth();
+    const searchEl = document.getElementById('filterSearch');
+    if (searchEl) searchEl.value = '';
+    loadAgenda();
+}
+
+// 🆕 UPDATE BADGE AGENDA DI SIDEBAR
+function updateAgendaBadge() {
+    const badge = document.getElementById('agendaBadge');
+    if (!badge) return;
+    
+    const count = allAgenda.filter(a => a.status !== 'selesai').length;
+    
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+        badge.style.animation = 'pulse 2s infinite';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
 window.navigateTo = function(page) {
     document.querySelectorAll('.nav-link').forEach(l=>l.classList.toggle('active', l.dataset.page===page));
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     setTimeout(()=>{const t=document.getElementById(`page-${page}`); if(t) t.classList.add('active');},50);
     const t={dashboard:'Dashboard',agenda:'Manajemen Agenda',calendar:'Kalender',importExport:'Import/Export',users:'Manajemen User',settings:'Pengaturan'};
     document.getElementById('pageTitle').textContent=t[page]||'Dashboard';
-    if(page==='dashboard')loadDashboard(); if(page==='agenda')loadAgenda(); if(page==='calendar')renderCalendar(); if(page==='users')loadUsers(); if(page==='settings')loadSettings();
-    if(window.innerWidth<=767) document.getElementById('sidebar')?.classList.remove('active'); window.scrollTo({top:0,behavior:'smooth'});
+    
+    if(page==='dashboard') loadDashboard(); 
+    if(page==='agenda') {
+        // 🆕 Auto-filter ke bulan saat ini saat membuka menu Agenda
+        autoFilterCurrentMonth();
+        loadAgenda();
+    }
+    if(page==='calendar') renderCalendar(); 
+    if(page==='users') loadUsers(); 
+    if(page==='settings') loadSettings();
+    
+    if(window.innerWidth<=767) document.getElementById('sidebar')?.classList.remove('active'); 
+    window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function normalizeStatus() { const today=new Date().toISOString().split('T')[0]; allAgenda.forEach(a=>{if(a.tanggal && a.tanggal<today) a.status='selesai';}); }
+
 async function loadAgenda() { 
     const res = await api('getAgenda',{
         username: currentUser.username,
@@ -146,15 +208,27 @@ async function loadAgenda() {
         allAgenda=res.data||[]; 
         normalizeStatus(); 
         renderAgendaTable(); 
-        loadDashboard(); 
+        loadDashboard();
+        updateAgendaBadge(); // 🆕 Update badge setelah load
     } 
     return res; 
 }
 
 async function handleAgendaSubmit(e) {
     e.preventDefault(); const id=document.getElementById('agendaId').value; 
-    const p = { tanggal: document.getElementById('agendaTanggal').value, waktu_mulai: document.getElementById('agendaWaktuMulai').value, waktu_selesai: document.getElementById('agendaWaktuSelesai').value, kegiatan: document.getElementById('agendaKegiatan').value, tempat: document.getElementById('agendaTempat').value, penanggung_jawab: document.getElementById('agendaPJ').value, pakaian: document.getElementById('agendaPakaian').value,// ✅ GANTI dengan:
-petugas: getPetugasValue(), pejabat: document.getElementById('agendaPejabat').value, keterangan: document.getElementById('agendaKeterangan').value, dibuat_oleh: currentUser.username }; 
+    const p = { 
+        tanggal: document.getElementById('agendaTanggal').value, 
+        waktu_mulai: document.getElementById('agendaWaktuMulai').value, 
+        waktu_selesai: document.getElementById('agendaWaktuSelesai').value, 
+        kegiatan: document.getElementById('agendaKegiatan').value, 
+        tempat: document.getElementById('agendaTempat').value, 
+        penanggung_jawab: document.getElementById('agendaPJ').value, 
+        pakaian: document.getElementById('agendaPakaian').value,
+        petugas: getPetugasValue(), 
+        pejabat: document.getElementById('agendaPejabat').value, 
+        keterangan: document.getElementById('agendaKeterangan').value, 
+        dibuat_oleh: currentUser.username 
+    }; 
     const wantWA=document.getElementById('sendWhatsApp')?.checked;
     let res; if(id){p.id=id;res=await api('updateAgenda',p);} else {res=await api('addAgenda',p);}
     if(res.status==='success'){showToast(res.message,'success');closeAgendaModal();if(!id&&wantWA&&res.data?.id)sendWhatsAppDirect({...p,id:res.data.id});await loadAgenda();}
@@ -234,7 +308,7 @@ function renderAgendaTable() {
     if(!tbody)return; 
     tbody.innerHTML=''; 
     if(!allAgenda.length){
-        tbody.innerHTML='<tr><td colspan="10" class="text-center text-muted">Tidak ada data agenda</td></tr>';
+        tbody.innerHTML='<tr><td colspan="10" class="text-center text-muted"><i class="fas fa-calendar-times fa-2x mb-2"></i><br>Tidak ada data agenda</td></tr>';
         return;
     }
     const s=[...allAgenda].sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||'')||(a.waktu_mulai||'').localeCompare(b.waktu_mulai||'')), 
@@ -242,6 +316,7 @@ function renderAgendaTable() {
     s.forEach((a,i)=>{
         const isSelesai = a.status === 'selesai';
         const tr=document.createElement('tr');
+        tr.style.animation = `fadeIn 0.3s ease-out ${i * 0.05}s both`;
         tr.innerHTML=`<td><input type="checkbox" class="agenda-check write-access" value="${a.id}"></td>
         <td>${i+1}</td>
         <td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
@@ -280,6 +355,7 @@ function renderUsersTableCompact(users){
         
         const tr = document.createElement('tr');
         tr.setAttribute('data-role', rc);
+        tr.style.animation = `fadeIn 0.3s ease-out ${index * 0.05}s both`;
         tr.innerHTML = `
             <td>${index + 1}</td>
             <td><div class="user-info-compact"><div class="user-avatar-compact">${(u.nama_lengkap || u.username).charAt(0).toUpperCase()}</div><div class="user-details-compact"><div class="user-name-compact">${u.nama_lengkap || '-'}</div><div class="user-username-compact">@${u.username}</div></div></div></td>
@@ -340,7 +416,6 @@ function openUserModal(username = null) {
 async function handleUserSubmit() {
     console.log('🚀 [SUBMIT] Klik Simpan terdeteksi!');
     
-    // Fix Typo: getElemen tById -> getElementById
     const roleEl = document.getElementById('userRole');
     if(!roleEl) return console.error('❌ Elemen #userRole TIDAK DITEMUKAN di DOM!');
 
@@ -348,12 +423,10 @@ async function handleUserSubmit() {
     console.log('🔍 [DOM CHECK] value saat ini:', roleEl.value);
     console.log('🔍 [DOM CHECK] selectedIndex:', roleEl.selectedIndex, '-> Option value:', roleEl.options[roleEl.selectedIndex].value);
 
-    // Fix Typo: select edRole -> selectedRole
     let selectedRole = roleEl.value.trim().toLowerCase();
     if (!selectedRole || selectedRole === '') selectedRole = roleEl.options[roleEl.selectedIndex].value.trim().toLowerCase();
     if (!selectedRole || selectedRole === '') selectedRole = 'user';
 
-    // Fix Typo: do cument -> document
     const username = document.getElementById('userUsername').value.trim();
     const nama = document.getElementById('userNama').value.trim();
     const jabatan = document.getElementById('userJabatan').value.trim();
@@ -361,12 +434,10 @@ async function handleUserSubmit() {
     const old = document.getElementById('userOldUsername').value;
 
     if (!username || !nama || !jabatan) { showToast('⚠️ Username, Nama, dan Jabatan wajib diisi!', 'warning'); return; }
-    // Fix Typo: & & -> &&
     if (!old && !pwd) { showToast('⚠️ Password wajib diisi untuk user baru!', 'warning'); return; }
 
     console.log('📤 [FINAL PAYLOAD] Role yang akan dikirim:', selectedRole);
 
-    // Fix Typo: u sername -> username
     const payload = { username, role: selectedRole, nama_lengkap: nama, jabatan };
     if (old && pwd) payload.newPassword = pwd;
     if (!old) payload.password = pwd;
@@ -396,6 +467,7 @@ window.editUser=function(u){openUserModal(u);};
 window.deleteUser=async function(u){if(!confirm(`Hapus user ${u}?`))return;const res=await api('deleteUser',{username:u});if(res.status==='success'){showToast(res.message,'success');loadUsers();}};
 
 async function loadDashboard(){ const td=new Date().toISOString().split('T')[0],we=new Date();we.setDate(we.getDate()+7);const weS=we.toISOString().split('T')[0],mS=td.substring(0,7)+'-01'; const active=allAgenda.filter(a=>a.status!=='selesai'); document.getElementById('statTotal').textContent=active.length; document.getElementById('statToday').textContent=active.filter(a=>a.tanggal===td).length; document.getElementById('statWeek').textContent=active.filter(a=>a.tanggal>=td&&a.tanggal<=weS).length; document.getElementById('statMonth').textContent=active.filter(a=>a.tanggal>=mS).length; renderUpcomingTable(); }
+
 function renderUpcomingTable(){ 
     const tbody=document.querySelector('#upcomingTable tbody');
     if(!tbody)return;
@@ -411,8 +483,9 @@ function renderUpcomingTable(){
         return;
     } 
     
-    up.forEach(a=>{
+    up.forEach((a, i)=>{
         const tr=document.createElement('tr');
+        tr.style.animation = `fadeIn 0.3s ease-out ${i * 0.05}s both`;
         tr.innerHTML=`<td>${formatDate(a.tanggal)} ${a.tanggal===td?'<span class="badge badge-warning">Hari Ini</span>':''}</td>
         <td style="white-space:nowrap;">${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</td>
         <td><strong>${a.kegiatan||'-'}</strong></td>
@@ -451,8 +524,8 @@ function showCalendarEvents(ds){
     const ags = allAgenda.filter(a => a.tanggal === ds);
     
     body.innerHTML = ags.length 
-        ? ags.map(a => `
-            <div class="calendar-event-item">
+        ? ags.map((a, i) => `
+            <div class="calendar-event-item" style="animation: fadeIn 0.3s ease-out ${i * 0.05}s both;">
                 <strong>${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</strong> | ${a.kegiatan||'-'}
                 <br><small class="text-muted">📍 ${a.tempat||'-'} | <b>👥 Petugas:</b> <b>${a.petugas||'-'}</b></small>
             </div>
@@ -479,63 +552,184 @@ async function exportAgenda(fmt) {
     showToast(`Export ${ext.toUpperCase()} berhasil`, 'success');
 }
 
-window.generateDailyReport = function() {
-    const dateInput = document.getElementById('reportDate').value;
-    if (!dateInput) return showToast('Pilih tanggal terlebih dahulu', 'warning');
+// ============================================
+// 🆕 FITUR CETAK LAPORAN - AMBIL DATA KESELURUHAN DARI DATABASE
+// ============================================
+
+// Toggle input berdasarkan periode yang dipilih
+window.toggleReportPeriod = function() {
+    const period = document.querySelector('input[name="reportPeriod"]:checked').value;
+    const dailyInput = document.getElementById('dailyPeriodInput');
+    const monthlyInput = document.getElementById('monthlyPeriodInput');
+    const yearlyInput = document.getElementById('yearlyPeriodInput');
     
-    const dailyAgenda = allAgenda.filter(a => a.tanggal === dateInput);
-    if (dailyAgenda.length === 0) return showToast('Tidak ada agenda pada tanggal tersebut.', 'info');
+    if (dailyInput) dailyInput.style.display = period === 'daily' ? 'block' : 'none';
+    if (monthlyInput) monthlyInput.style.display = period === 'monthly' ? 'block' : 'none';
+    if (yearlyInput) yearlyInput.style.display = period === 'yearly' ? 'block' : 'none';
+}
+
+// 🆕 FUNGSI UTAMA: Ambil SEMUA data agenda dari database (tanpa filter tanggal)
+async function fetchAllAgendaFromDatabase() {
+    try {
+        const res = await api('getAgenda', {
+            username: currentUser.username,
+            role: currentUser.role,
+            startDate: '',   // KOSONGKAN - ambil semua data
+            endDate: '',     // KOSONGKAN - ambil semua data
+            search: ''       // KOSONGKAN - ambil semua data
+        }, { skipLoading: false });
+        
+        if (res.status === 'success') {
+            return res.data || [];
+        }
+        return [];
+    } catch (err) {
+        console.error('❌ Error fetching all agenda:', err);
+        return [];
+    }
+}
+
+// 🆕 Generate laporan berdasarkan periode - AMBIL DATA DARI DATABASE
+window.generateReport = async function() {
+    const period = document.querySelector('input[name="reportPeriod"]:checked').value;
     
-    dailyAgenda.sort((a, b) => (a.waktu_mulai || '').localeCompare(b.waktu_mulai || ''));
-    const fullDate = new Date(dateInput).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    // Tampilkan loading pada button
+    const btn = event?.target?.closest('.btn');
+    const originalHTML = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil data...';
+    }
     
-    const printContent = `<!DOCTYPE html>
-    <html lang="id">
-    <head>
-        <meta charset="UTF-8">
-        <title>Laporan Agenda - ${fullDate}</title>
-        <style>
-            @page { size: A4 landscape; margin: 1.5cm; }
-            body { font-family: 'Segoe UI', sans-serif; color: #111; line-height: 1.4; padding: 0; margin: 0; background: #fff; }
-            .container { max-width: 100%; margin: 0 auto; }
-            .header { text-align: center; margin-bottom: 25px; border-bottom: 3px double #1a5632; padding-bottom: 15px; }
-            .header h1 { margin: 0; color: #1a5632; font-size: 20px; text-transform: uppercase; }
-            .header h2 { margin: 8px 0 0; color: #333; font-size: 16px; }
-            .header p { margin: 5px 0 0; color: #555; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-            th { background-color: #1a5632; color: #fff; padding: 10px 8px; text-align: center; border: 1px solid #1a5632; }
-            td { border: 1px solid #ccc; padding: 8px; vertical-align: top; }
-            tr:nth-child(even) { background-color: #f8f9fa; }
-            .footer { margin-top: 30px; text-align: right; font-size: 12px; color: #444; }
-            .no-print { text-align: center; margin-top: 40px; padding: 20px; background: #e9ecef; border-radius: 8px; }
-            .btn-print { padding: 12px 25px; background: #1a5632; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; }
-            @media print { body { padding: 0; } .no-print { display: none !important; } }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>Kementerian Agama Kabupaten Tanah Datar</h1>
-                <h2>LAPORAN REKAP AGENDA PIMPINAN</h2>
-                <p>Hari/Tanggal: ${fullDate}</p>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Waktu</th>
-                        <th>Nama Kegiatan</th>
-                        <th>Tempat</th>
-                        <th>Penanggung Jawab</th>
-                        <th>Petugas</th>
-                        <th>Pejabat</th>
-                        <th>Ket & Pakaian</th>
+    try {
+        // 🆕 AMBIL SEMUA DATA DARI DATABASE (bukan dari allAgenda yang ter-filter)
+        const allDatabaseAgenda = await fetchAllAgendaFromDatabase();
+        
+        if (allDatabaseAgenda.length === 0) {
+            showToast('Tidak ada data agenda di database.', 'warning');
+            return;
+        }
+        
+        // Normalisasi status
+        const today = new Date().toISOString().split('T')[0];
+        allDatabaseAgenda.forEach(a => {
+            if (a.tanggal && a.tanggal < today) a.status = 'selesai';
+        });
+        
+        let filteredAgenda = [];
+        let periodTitle = '';
+        let periodSubtitle = '';
+        
+        if (period === 'daily') {
+            const dateInput = document.getElementById('reportDate').value;
+            if (!dateInput) {
+                showToast('Pilih tanggal terlebih dahulu', 'warning');
+                return;
+            }
+            
+            // Filter dari SEMUA data database
+            filteredAgenda = allDatabaseAgenda.filter(a => a.tanggal === dateInput);
+            const fullDate = new Date(dateInput + 'T00:00:00').toLocaleDateString('id-ID', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            periodTitle = 'LAPORAN HARIAN';
+            periodSubtitle = `Hari/Tanggal: ${fullDate}`;
+            
+        } else if (period === 'monthly') {
+            const monthInput = document.getElementById('reportMonth').value;
+            if (!monthInput) {
+                showToast('Pilih bulan terlebih dahulu', 'warning');
+                return;
+            }
+            
+            const [year, month] = monthInput.split('-');
+            
+            // Filter dari SEMUA data database
+            filteredAgenda = allDatabaseAgenda.filter(a => {
+                if (!a.tanggal) return false;
+                const parts = a.tanggal.split('-');
+                return parts[0] === year && parts[1] === month;
+            });
+            
+            const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                               'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            periodTitle = 'LAPORAN BULANAN';
+            periodSubtitle = `Bulan: ${monthNames[parseInt(month) - 1]} ${year}`;
+            
+        } else if (period === 'yearly') {
+            const yearInput = document.getElementById('reportYear').value;
+            if (!yearInput) {
+                showToast('Pilih tahun terlebih dahulu', 'warning');
+                return;
+            }
+            
+            // Filter dari SEMUA data database
+            filteredAgenda = allDatabaseAgenda.filter(a => {
+                if (!a.tanggal) return false;
+                const parts = a.tanggal.split('-');
+                return parts[0] === yearInput;
+            });
+            
+            periodTitle = 'LAPORAN TAHUNAN';
+            periodSubtitle = `Tahun: ${yearInput}`;
+        }
+        
+        if (filteredAgenda.length === 0) {
+            showToast('Tidak ada agenda pada periode tersebut.', 'info');
+            return;
+        }
+        
+        // Sort by date and time
+        filteredAgenda.sort((a, b) => 
+            (a.tanggal || '').localeCompare(b.tanggal || '') || 
+            (a.waktu_mulai || '').localeCompare(b.waktu_mulai || '')
+        );
+        
+        // Group by date for monthly/yearly reports
+        const groupedAgenda = {};
+        filteredAgenda.forEach(a => {
+            if (!groupedAgenda[a.tanggal]) {
+                groupedAgenda[a.tanggal] = [];
+            }
+            groupedAgenda[a.tanggal].push(a);
+        });
+        
+        // Generate HTML report
+        let tableRows = '';
+        
+        if (period === 'daily') {
+            tableRows = filteredAgenda.map((a, i) => `
+                <tr>
+                    <td style="text-align:center;">${i + 1}</td>
+                    <td style="text-align:center;">${a.waktu_mulai || '-'}<br><small>s/d ${a.waktu_selesai || '-'}</small></td>
+                    <td><strong>${a.kegiatan || '-'}</strong></td>
+                    <td>${a.tempat || '-'}</td>
+                    <td>${a.penanggung_jawab || '-'}</td>
+                    <td><strong>${a.petugas || '-'}</strong></td>
+                    <td>${a.pejabat || '-'}</td>
+                    <td>${a.keterangan || '-'}<br><small>${a.pakaian || ''}</small></td>
+                </tr>
+            `).join('');
+        } else {
+            let globalIndex = 0;
+            Object.keys(groupedAgenda).sort().forEach(date => {
+                const dateFormatted = new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { 
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+                });
+                
+                tableRows += `
+                    <tr style="background-color: #1a5632; color: white;">
+                        <td colspan="8" style="text-align: center; font-weight: bold; padding: 12px;">
+                             ${dateFormatted}
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    ${dailyAgenda.map((a, i) => `
+                `;
+                
+                groupedAgenda[date].forEach((a, idx) => {
+                    globalIndex++;
+                    tableRows += `
                         <tr>
-                            <td style="text-align:center;">${i + 1}</td>
+                            <td style="text-align:center;">${idx + 1}</td>
                             <td style="text-align:center;">${a.waktu_mulai || '-'}<br><small>s/d ${a.waktu_selesai || '-'}</small></td>
                             <td><strong>${a.kegiatan || '-'}</strong></td>
                             <td>${a.tempat || '-'}</td>
@@ -544,23 +738,205 @@ window.generateDailyReport = function() {
                             <td>${a.pejabat || '-'}</td>
                             <td>${a.keterangan || '-'}<br><small>${a.pakaian || ''}</small></td>
                         </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            <div class="footer">
-                <p>Dicetak oleh: ${currentUser ? currentUser.nama_lengkap : 'Admin'}</p>
-                <p>Waktu Cetak: ${new Date().toLocaleString('id-ID')}</p>
+                    `;
+                });
+            });
+        }
+        
+        // Calculate statistics
+        const totalAgenda = filteredAgenda.length;
+        const uniqueDates = Object.keys(groupedAgenda).length;
+        
+        const printContent = `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>${periodTitle} - ${periodSubtitle}</title>
+    <style>
+        @page { size: A4 landscape; margin: 1.5cm; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color: #111; 
+            line-height: 1.4; 
+            padding: 0; 
+            margin: 0; 
+            background: #fff; 
+        }
+        .container { max-width: 100%; margin: 0 auto; }
+        .header { 
+            text-align: center; 
+            margin-bottom: 25px; 
+            border-bottom: 3px double #1a5632; 
+            padding-bottom: 15px; 
+        }
+        .header h1 { 
+            margin: 0; 
+            color: #1a5632; 
+            font-size: 22px; 
+            text-transform: uppercase; 
+            font-weight: 700;
+        }
+        .header h2 { 
+            margin: 8px 0 0; 
+            color: #333; 
+            font-size: 18px; 
+            font-weight: 600;
+        }
+        .header p { 
+            margin: 5px 0 0; 
+            color: #555; 
+            font-size: 14px; 
+        }
+        .stats { 
+            display: flex; 
+            justify-content: space-around; 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: #f8f9fa; 
+            border-radius: 8px; 
+        }
+        .stat-item { text-align: center; }
+        .stat-item .stat-number { 
+            font-size: 24px; 
+            font-weight: 700; 
+            color: #1a5632; 
+        }
+        .stat-item .stat-label { 
+            font-size: 12px; 
+            color: #666; 
+            margin-top: 5px; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+            font-size: 12px; 
+        }
+        th { 
+            background-color: #1a5632; 
+            color: #fff; 
+            padding: 10px 8px; 
+            text-align: center; 
+            border: 1px solid #1a5632; 
+            font-weight: 600;
+        }
+        td { 
+            border: 1px solid #ccc; 
+            padding: 8px; 
+            vertical-align: top; 
+        }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        .footer { 
+            margin-top: 30px; 
+            text-align: right; 
+            font-size: 12px; 
+            color: #444; 
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        .no-print { 
+            text-align: center; 
+            margin-top: 40px; 
+            padding: 20px; 
+            background: #e9ecef; 
+            border-radius: 8px; 
+        }
+        .btn-print { 
+            padding: 12px 25px; 
+            background: #1a5632; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 15px; 
+            font-weight: bold; 
+            margin: 0 5px;
+        }
+        .btn-print:hover { background: #0d3d1f; }
+        @media print { 
+            body { padding: 0; } 
+            .no-print { display: none !important; } 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Kementerian Agama Kabupaten Tanah Datar</h1>
+            <h2>${periodTitle}</h2>
+            <p>${periodSubtitle}</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">${totalAgenda}</div>
+                <div class="stat-label">Total Agenda</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${uniqueDates}</div>
+                <div class="stat-label">${period === 'daily' ? 'Hari' : 'Tanggal'}</div>
             </div>
         </div>
-        <div class="no-print">
-            <button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%;">No</th>
+                    <th style="width: 12%;">Waktu</th>
+                    <th style="width: 25%;">Nama Kegiatan</th>
+                    <th style="width: 15%;">Tempat</th>
+                    <th style="width: 12%;">Penanggung Jawab</th>
+                    <th style="width: 12%;">Petugas</th>
+                    <th style="width: 10%;">Pejabat</th>
+                    <th style="width: 9%;">Ket & Pakaian</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            <p><strong>Dicetak oleh:</strong> ${currentUser ? currentUser.nama_lengkap : 'Admin'}</p>
+            <p><strong>Waktu Cetak:</strong> ${new Date().toLocaleString('id-ID')}</p>
         </div>
-    </body>
-    </html>`;
+    </div>
+    
+    <div class="no-print">
+        <button class="btn-print" onclick="window.print()">
+            🖨️ Cetak / Simpan PDF
+        </button>
+        <button class="btn-print" onclick="window.close()" style="background: #6c757d;">
+            ✕ Tutup
+        </button>
+    </div>
+</body>
+</html>`;
+        
+        const printWindow = window.open('', '_blank'); 
+        printWindow.document.write(printContent); 
+        printWindow.document.close();
+        
+        showToast(`✅ Laporan ${periodTitle.toLowerCase()} berhasil dibuat (${totalAgenda} agenda)`, 'success');
+        
+    } catch (err) {
+        console.error('❌ Error generating report:', err);
+        showToast('Gagal membuat laporan: ' + err.message, 'error');
+    } finally {
+        // Restore button
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML || '<i class="fas fa-print"></i> Cetak / Export PDF';
+        }
+    }
+}
 
-    const printWindow = window.open('', '_blank'); 
-    printWindow.document.write(printContent); 
-    printWindow.document.close();
+// Backward compatibility
+window.generateDailyReport = function() {
+    const dailyRadio = document.querySelector('input[name="reportPeriod"][value="daily"]');
+    if (dailyRadio) dailyRadio.checked = true;
+    toggleReportPeriod();
+    generateReport();
 }
 
 function loadSettings(){ document.getElementById('waMode').value = localStorage.getItem('waMode') || 'contact'; document.getElementById('waNumbers').value = localStorage.getItem('waNumbers') || ''; document.getElementById('waNumberInput').style.display = document.getElementById('waMode').value === 'number' ? 'block' : 'none'; }
@@ -570,7 +946,7 @@ function showToast(msg, type='info', duration=4000){ const t=document.getElement
 function updateClock(){const n=new Date();const o={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'};const e=document.getElementById('currentDateTime');if(e)e.textContent=n.toLocaleDateString('id-ID',o);}
 function formatDate(ds){if(!ds)return'-';if(ds instanceof Date){const d=ds.getDate(),m=ds.getMonth(),y=ds.getFullYear();const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${d} ${mo[m]} ${y}`;}const p=String(ds).trim().split(/[-T]/);if(p.length>=3){const[y,m,d]=p;const mo=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return`${parseInt(d,10)} ${mo[parseInt(m,10)-1]} ${y}`;}return String(ds);}
 
-window.navigateTo=window.navigateTo||navigateTo; window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect; window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById; window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect; window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda; window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas; window.editAgenda=window.editAgenda||editAgenda; window.deleteAgenda=window.deleteAgenda||deleteAgenda; window.openAgendaModal=window.openAgendaModal||openAgendaModal; window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal; window.loadAgenda=window.loadAgenda||loadAgenda; window.changeMonth=window.changeMonth||changeMonth; window.openUserModal=window.openUserModal||openUserModal; window.closeUserModal=window.closeUserModal||closeUserModal; window.editUser=window.editUser||editUser; window.deleteUser=window.deleteUser||deleteUser; window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser; window.allowLoginUser=window.allowLoginUser||allowLoginUser; window.confirmImport=window.confirmImport||confirmImport; window.exportAgenda=window.exportAgenda||exportAgenda; window.saveWaSettings=window.saveWaSettings||saveWaSettings; window.generateDailyReport=window.generateDailyReport||generateDailyReport;
+window.navigateTo=window.navigateTo||navigateTo; window.sendWhatsAppDirect=window.sendWhatsAppDirect||sendWhatsAppDirect; window.sendWhatsAppById=window.sendWhatsAppById||sendWhatsAppById; window.sendWhatsApp=window.sendWhatsApp||sendWhatsAppDirect; window.sendDailyAgenda=window.sendDailyAgenda||sendDailyAgenda; window.sendSelectedAgendas=window.sendSelectedAgendas||sendSelectedAgendas; window.editAgenda=window.editAgenda||editAgenda; window.deleteAgenda=window.deleteAgenda||deleteAgenda; window.openAgendaModal=window.openAgendaModal||openAgendaModal; window.closeAgendaModal=window.closeAgendaModal||closeAgendaModal; window.loadAgenda=window.loadAgenda||loadAgenda; window.changeMonth=window.changeMonth||changeMonth; window.openUserModal=window.openUserModal||openUserModal; window.closeUserModal=window.closeUserModal||closeUserModal; window.editUser=window.editUser||editUser; window.deleteUser=window.deleteUser||deleteUser; window.forceLogoutUser=window.forceLogoutUser||forceLogoutUser; window.allowLoginUser=window.allowLoginUser||allowLoginUser; window.confirmImport=window.confirmImport||confirmImport; window.exportAgenda=window.exportAgenda||exportAgenda; window.saveWaSettings=window.saveWaSettings||saveWaSettings; window.generateDailyReport=window.generateDailyReport||generateDailyReport; window.toggleReportPeriod=window.toggleReportPeriod||toggleReportPeriod; window.generateReport=window.generateReport||generateReport; window.resetFilter=window.resetFilter||resetFilter;
 
 // 🔄 Helper: Ambil nilai Petugas (checkboxes + manual)
 function getPetugasValue() {
