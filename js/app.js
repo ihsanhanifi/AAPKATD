@@ -1,5 +1,5 @@
 // ============================================
-// AGENDA PIMPINAN - FRONTEND JS (SYNCED & FIXED)
+// AGENDA PIMPINAN - FRONTEND JS (SYNCED & ENHANCED)
 // ============================================
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbymrRxD3Q3t1IkFISFCRol0la4RqyOVdyhvmm0vKTMNs65BjJeSRTKWUc2AGtFjCeXV7w/exec';
@@ -15,6 +15,97 @@ const E = {
 };
 
 let loadingCounter = 0; let loadingTimeout;
+
+// ============================================
+// 🔊 FITUR SUARA (WEB AUDIO API - Tanpa File Eksternal)
+// ============================================
+function playSound(type) {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'success') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+            osc.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime + 0.15); // C6
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.4);
+        } else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, ctx.currentTime);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+        } else if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, ctx.currentTime);
+            gain.gain.setValueAtTime(0.05, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+        }
+    } catch (e) {
+        console.warn('Audio play failed:', e);
+    }
+}
+
+// ============================================
+// 🔔 FITUR NOTIFIKASI MODERN (ALERT MODAL)
+// ============================================
+function showNotification(title, message, type = 'info', duration = 4000) {
+    playSound(type === 'error' ? 'error' : (type === 'warning' ? 'click' : 'success'));
+    
+    // Pastikan container ada (fallback jika belum ada di HTML)
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        document.body.appendChild(container);
+    }
+
+    const alertBox = document.createElement('div');
+    alertBox.className = `custom-alert ${type}`;
+    
+    let icon = 'fa-info-circle';
+    if (type === 'success') icon = 'fa-check-circle';
+    if (type === 'error') icon = 'fa-exclamation-circle';
+    if (type === 'warning') icon = 'fa-exclamation-triangle';
+
+    alertBox.innerHTML = `
+        <div class="custom-alert-icon"><i class="fas ${icon}"></i></div>
+        <div class="custom-alert-content">
+            <h4>${title}</h4>
+            <p>${message}</p>
+        </div>
+        <button class="custom-alert-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+    `;
+
+    container.appendChild(alertBox);
+
+    setTimeout(() => {
+        alertBox.style.animation = 'fadeOut 0.4s ease forwards';
+        setTimeout(() => {
+            if (alertBox.parentElement) alertBox.remove();
+        }, 400);
+    }, duration);
+}
+
+// Override showToast agar kompatibel dengan kode lama tapi menggunakan UI baru
+function showToast(msg, type = 'info', duration = 4000) {
+    let title = 'Pemberitahuan';
+    if (type === 'success') title = 'Berhasil';
+    if (type === 'error') title = 'Gagal';
+    if (type === 'warning') title = 'Peringatan';
+    showNotification(title, msg, type, duration);
+}
 
 // ============================================
 // 🕒 HELPER: WAKTU LOKAL (WIB/Asia-Jakarta)
@@ -88,20 +179,53 @@ function resetActivityTimer() { clearTimeout(idleTimer); idleTimer = setTimeout(
 function checkLogin() { const s = sessionStorage.getItem('agendaUser'); if(s){currentUser=JSON.parse(s); showApp();} }
 
 async function handleLogin(e) {
-    e.preventDefault(); const btn=document.getElementById('loginBtn'), errDiv=document.getElementById('loginError'); btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memuat...'; errDiv.textContent='';
-    const res = await api('login', {username:document.getElementById('loginUsername').value, password:document.getElementById('loginPassword').value});
-    btn.disabled=false; btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Masuk';
-    if(res.status==='success'){ currentUser=res.data; sessionStorage.setItem('agendaUser', JSON.stringify(currentUser)); showApp(); } else {errDiv.textContent=res.message;}
+    e.preventDefault(); 
+    playSound('click');
+    const btn = document.getElementById('loginBtn'), errDiv = document.getElementById('loginError'); 
+    btn.disabled = true; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...'; 
+    errDiv.textContent = '';
+    
+    const res = await api('login', {
+        username: document.getElementById('loginUsername').value, 
+        password: document.getElementById('loginPassword').value
+    });
+    
+    btn.disabled = false; 
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk';
+    
+    if (res.status === 'success') { 
+        currentUser = res.data; 
+        sessionStorage.setItem('agendaUser', JSON.stringify(currentUser)); 
+        showNotification('Login Berhasil', `Selamat datang, ${currentUser.nama_lengkap}!`, 'success');
+        showApp(); 
+    } else {
+        playSound('error');
+        errDiv.textContent = res.message;
+        showNotification('Login Gagal', res.message, 'error');
+    }
 }
 
-function handleLogout() { clearTimeout(idleTimer); sessionStorage.removeItem('agendaUser'); currentUser = null; document.getElementById('loginPage').style.display='flex'; document.getElementById('appPage').style.display='none'; document.getElementById('loginForm')?.reset(); }
+function handleLogout() { 
+    playSound('click');
+    showNotification('Logout', 'Anda telah berhasil keluar dari sistem.', 'info', 2000);
+    setTimeout(() => {
+        clearTimeout(idleTimer); 
+        sessionStorage.removeItem('agendaUser'); 
+        currentUser = null; 
+        document.getElementById('loginPage').style.display = 'flex'; 
+        document.getElementById('appPage').style.display = 'none'; 
+        document.getElementById('loginForm')?.reset(); 
+    }, 1000);
+}
 
 function showApp() {
-    document.getElementById('loginPage').style.display='none'; document.getElementById('appPage').style.display='flex';
-    document.getElementById('userAvatar').textContent=currentUser.nama_lengkap.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
-    document.getElementById('userName').textContent=currentUser.nama_lengkap; 
+    document.getElementById('loginPage').style.display = 'none'; 
+    document.getElementById('appPage').style.display = 'flex';
+    document.getElementById('userAvatar').textContent = currentUser.nama_lengkap.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    document.getElementById('userName').textContent = currentUser.nama_lengkap; 
     const roleTextEl = document.getElementById('userRoleText');
-    if(roleTextEl) roleTextEl.textContent=currentUser.jabatan;
+    if(roleTextEl) roleTextEl.textContent = currentUser.jabatan;
     
     const role = currentUser.role;
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
@@ -115,12 +239,20 @@ function showApp() {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
     }
 
-    setupAutoLogout(); loadSettings(); 
+    setupAutoLogout(); 
+    loadSettings(); 
     window.navigateTo('dashboard'); 
     loadAgenda();
 }
 
-async function checkMySession() { if(!currentUser) return; const res = await api('checkMySession', {username: currentUser.username}, { skipLoading: true }); if(res.status==='success' && res.data?.force_logout) { showToast('⚠️ Sesi Anda telah diakhiri oleh Admin.', 'warning'); setTimeout(() => handleLogout(), 1500); } }
+async function checkMySession() { 
+    if(!currentUser) return; 
+    const res = await api('checkMySession', {username: currentUser.username}, { skipLoading: true }); 
+    if(res.status === 'success' && res.data?.force_logout) { 
+        showToast('⚠️ Sesi Anda telah diakhiri oleh Admin.', 'warning'); 
+        setTimeout(() => handleLogout(), 1500); 
+    } 
+}
 
 function autoFilterCurrentMonth() {
     const now = new Date();
@@ -138,6 +270,7 @@ function autoFilterCurrentMonth() {
 }
 
 window.resetFilter = function() {
+    playSound('click');
     autoFilterCurrentMonth();
     const searchEl = document.getElementById('filterSearch');
     if (searchEl) searchEl.value = '';
@@ -158,20 +291,24 @@ function updateAgendaBadge() {
 }
 
 window.navigateTo = function(page) {
-    document.querySelectorAll('.nav-link').forEach(l=>l.classList.toggle('active', l.dataset.page===page));
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    setTimeout(()=>{const t=document.getElementById(`page-${page}`); if(t) t.classList.add('active');},50);
-    const t={dashboard:'Dashboard',agenda:'Manajemen Agenda',calendar:'Kalender',importExport:'Import/Export',users:'Manajemen User',settings:'Pengaturan'};
-    document.getElementById('pageTitle').textContent=t[page]||'Dashboard';
+    playSound('click');
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    setTimeout(() => {
+        const t = document.getElementById(`page-${page}`); 
+        if(t) t.classList.add('active');
+    }, 50);
+    const t = {dashboard:'Dashboard', agenda:'Manajemen Agenda', calendar:'Kalender', importExport:'Import/Export', users:'Manajemen User', settings:'Pengaturan'};
+    document.getElementById('pageTitle').textContent = t[page] || 'Dashboard';
     
-    if(page==='dashboard') loadDashboard(); 
-    if(page==='agenda') { autoFilterCurrentMonth(); loadAgenda(); }
-    if(page==='calendar') renderCalendar(); 
-    if(page==='users') loadUsers(); 
-    if(page==='settings') loadSettings();
+    if(page === 'dashboard') loadDashboard(); 
+    if(page === 'agenda') { autoFilterCurrentMonth(); loadAgenda(); }
+    if(page === 'calendar') renderCalendar(); 
+    if(page === 'users') loadUsers(); 
+    if(page === 'settings') loadSettings();
     
-    if(window.innerWidth<=767) document.getElementById('sidebar')?.classList.remove('active'); 
-    window.scrollTo({top:0,behavior:'smooth'});
+    if(window.innerWidth <= 767) document.getElementById('sidebar')?.classList.remove('active'); 
+    window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 // 🆕 FIXED: Menggunakan waktu lokal, bukan UTC
@@ -181,13 +318,13 @@ function normalizeStatus() {
 }
 
 async function loadAgenda() { 
-    const res = await api('getAgenda',{
+    const res = await api('getAgenda', {
         username: currentUser.username, role: currentUser.role,
         startDate: document.getElementById('filterStartDate')?.value || '',
         endDate: document.getElementById('filterEndDate')?.value || '',
         search: document.getElementById('filterSearch')?.value || ''
     }); 
-    if(res.status==='success'){ 
+    if(res.status === 'success'){ 
         allAgenda = res.data || []; 
         normalizeStatus(); 
         renderAgendaTable(); 
@@ -198,7 +335,9 @@ async function loadAgenda() {
 }
 
 async function handleAgendaSubmit(e) {
-    e.preventDefault(); const id = document.getElementById('agendaId').value; 
+    e.preventDefault(); 
+    playSound('click');
+    const id = document.getElementById('agendaId').value; 
     const p = { 
         tanggal: document.getElementById('agendaTanggal').value, waktu_mulai: document.getElementById('agendaWaktuMulai').value, 
         waktu_selesai: document.getElementById('agendaWaktuSelesai').value, kegiatan: document.getElementById('agendaKegiatan').value, 
@@ -206,13 +345,25 @@ async function handleAgendaSubmit(e) {
         pakaian: document.getElementById('agendaPakaian').value, petugas: getPetugasValue(), pejabat: document.getElementById('agendaPejabat').value, 
         keterangan: document.getElementById('agendaKeterangan').value, dibuat_oleh: currentUser.username 
     }; 
+    
     const wantWA = document.getElementById('sendWhatsApp')?.checked;
-    let res; if(id){ p.id = id; res = await api('updateAgenda', p); } else { res = await api('addAgenda', p); }
-    if(res.status==='success'){
-        showToast(res.message,'success');
+    let res; 
+    if (id) {
+        p.id = id;
+        res = await api('updateAgenda', p);
+    } else {
+        res = await api('addAgenda', p);
+    }
+    
+    if (res.status === 'success') {
+        playSound('success');
+        showNotification('Berhasil', id ? 'Agenda berhasil diperbarui!' : 'Agenda baru berhasil ditambahkan!', 'success');
         closeAgendaModal();
-        if(!id && wantWA && res.data?.id) sendWhatsAppDirect({...p, id: res.data.id});
+        if (!id && wantWA && res.data?.id) sendWhatsAppDirect({...p, id: res.data.id});
         await loadAgenda();
+    } else {
+        playSound('error');
+        showNotification('Gagal', res.message, 'error');
     }
 }
 
@@ -268,6 +419,7 @@ window.sendWhatsApp = window.sendWhatsAppDirect;
 
 // 🆕 FIXED: Menggunakan waktu lokal
 window.sendDailyAgenda = function() {
+    playSound('click');
     const td = getLocalDateString();
     const daily = allAgenda.filter(a => a.tanggal === td && a.status !== 'selesai').sort((a,b) => (a.waktu_mulai||'').localeCompare(b.waktu_mulai||''));
     if(daily.length === 0) return showToast('Tidak ada agenda aktif hari ini', 'info');
@@ -276,6 +428,7 @@ window.sendDailyAgenda = function() {
 }
 
 window.sendSelectedAgendas = function() {
+    playSound('click');
     const checked = document.querySelectorAll('.agenda-check:checked');
     if(checked.length === 0) return showToast('Pilih minimal 1 agenda untuk dikirim.', 'warning');
     const ids = Array.from(checked).map(c => c.value);
@@ -306,6 +459,7 @@ function renderAgendaTable() {
 }
 
 function openAgendaModal(id=null){
+    playSound('click');
     document.getElementById('agendaModal').classList.add('active');
     document.getElementById('agendaModalTitle').textContent = id ? 'Edit Agenda' : 'Tambah Agenda';
     document.getElementById('agendaForm').reset();
@@ -329,7 +483,20 @@ function openAgendaModal(id=null){
 }
 function closeAgendaModal(){ document.getElementById('agendaModal').classList.remove('active'); }
 window.editAgenda = function(id){ openAgendaModal(id); };
-window.deleteAgenda = async function(id){ if(!confirm('Hapus agenda ini?')) return; const res = await api('deleteAgenda',{id}); if(res.status==='success'){ showToast(res.message,'success'); loadAgenda(); } };
+
+window.deleteAgenda = async function(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus agenda ini? Tindakan ini tidak dapat dibatalkan.')) return;
+    playSound('click');
+    const res = await api('deleteAgenda', {id});
+    if (res.status === 'success') {
+        playSound('success');
+        showNotification('Dihapus', 'Agenda berhasil dihapus dari database.', 'success');
+        loadAgenda();
+    } else {
+        playSound('error');
+        showNotification('Gagal', res.message, 'error');
+    }
+};
 
 async function loadUsers(){ const res = await api('getUsers'); if(res.status === 'success') renderUsersTableCompact(res.data); }
 
@@ -350,10 +517,29 @@ function renderUsersTableCompact(users){
     });
 }
 
-window.forceLogoutUser = async function(username) { if(!confirm(`Paksa logout user ${username}? User akan keluar otomatis dalam 20 detik.`)) return; const res = await api('forceLogoutUser', {username}); if(res.status==='success'){ showToast(res.message, 'success'); loadUsers(); } }
-window.allowLoginUser = async function(username) { const res = await api('allowLoginUser', {username}); if(res.status==='success'){ showToast(res.message, 'success'); loadUsers(); } }
+window.forceLogoutUser = async function(username) { 
+    if(!confirm(`Paksa logout user ${username}? User akan keluar otomatis dalam 20 detik.`)) return; 
+    playSound('click');
+    const res = await api('forceLogoutUser', {username}); 
+    if(res.status === 'success'){ 
+        playSound('success');
+        showToast(res.message, 'success'); 
+        loadUsers(); 
+    } 
+}
+
+window.allowLoginUser = async function(username) { 
+    playSound('click');
+    const res = await api('allowLoginUser', {username}); 
+    if(res.status === 'success'){ 
+        playSound('success');
+        showToast(res.message, 'success'); 
+        loadUsers(); 
+    } 
+}
 
 function openUserModal(username = null) {
+    playSound('click');
     document.getElementById('userModal').classList.add('active');
     document.getElementById('userForm').reset();
     document.getElementById('userOldUsername').value = '';
@@ -382,6 +568,7 @@ function openUserModal(username = null) {
 }
 
 async function handleUserSubmit() {
+    playSound('click');
     const roleEl = document.getElementById('userRole');
     if(!roleEl) return console.error('❌ Elemen #userRole TIDAK DITEMUKAN di DOM!');
     let selectedRole = roleEl.value.trim().toLowerCase();
@@ -392,8 +579,16 @@ async function handleUserSubmit() {
     const jabatan = document.getElementById('userJabatan').value.trim();
     const pwd = document.getElementById('userPassword').value;
     const old = document.getElementById('userOldUsername').value;
-    if (!username || !nama || !jabatan) { showToast('⚠️ Username, Nama, dan Jabatan wajib diisi!', 'warning'); return; }
-    if (!old && !pwd) { showToast('⚠️ Password wajib diisi untuk user baru!', 'warning'); return; }
+    if (!username || !nama || !jabatan) { 
+        playSound('error');
+        showNotification('Validasi Gagal', 'Username, Nama, dan Jabatan wajib diisi!', 'warning'); 
+        return; 
+    }
+    if (!old && !pwd) { 
+        playSound('error');
+        showNotification('Validasi Gagal', 'Password wajib diisi untuk user baru!', 'warning'); 
+        return; 
+    }
     const payload = { username, role: selectedRole, nama_lengkap: nama, jabatan };
     if (old && pwd) payload.newPassword = pwd;
     if (!old) payload.password = pwd;
@@ -402,15 +597,36 @@ async function handleUserSubmit() {
     let res;
     try {
         res = old ? await api('updateUser', payload) : await api('addUser', payload);
-        if (res.status === 'success') { showToast(res.message, 'success'); closeUserModal(); loadUsers(); } 
-        else { showToast('❌ Gagal: ' + res.message, 'error'); }
-    } catch(err) { showToast('❌ Error Server.', 'error'); } 
-    finally { if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Simpan'; } }
+        if (res.status === 'success') { 
+            playSound('success');
+            showNotification('Berhasil', res.message, 'success'); 
+            closeUserModal(); 
+            loadUsers(); 
+        } else {
+            playSound('error');
+            showNotification('Gagal', res.message, 'error'); 
+        }
+    } catch(err) { 
+        playSound('error');
+        showNotification('Error Server', 'Terjadi kesalahan pada server.', 'error'); 
+    } finally { 
+        if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Simpan'; } 
+    }
 }
 
 function closeUserModal(){ document.getElementById('userModal').classList.remove('active'); }
 window.editUser = function(u){ openUserModal(u); };
-window.deleteUser = async function(u){ if(!confirm(`Hapus user ${u}?`)) return; const res = await api('deleteUser',{username:u}); if(res.status==='success'){ showToast(res.message,'success'); loadUsers(); } };
+
+window.deleteUser = async function(u){ 
+    if(!confirm(`Hapus user ${u}?`)) return; 
+    playSound('click');
+    const res = await api('deleteUser',{username:u}); 
+    if(res.status === 'success'){ 
+        playSound('success');
+        showToast(res.message,'success'); 
+        loadUsers(); 
+    } 
+};
 
 // 🆕 FIXED: Dashboard menggunakan waktu lokal
 async function loadDashboard(){ 
@@ -468,7 +684,11 @@ function renderCalendar(){
     }
 }
 
-window.changeMonth = function(dir){ calendarDate.setMonth(calendarDate.getMonth() + dir); renderCalendar(); };
+window.changeMonth = function(dir){ 
+    playSound('click');
+    calendarDate.setMonth(calendarDate.getMonth() + dir); 
+    renderCalendar(); 
+};
 
 function showCalendarEvents(ds){
     document.getElementById('selectedDate').textContent = formatDate(ds);
@@ -478,13 +698,46 @@ function showCalendarEvents(ds){
     body.innerHTML = ags.length ? ags.map((a, i) => `<div class="calendar-event-item" style="animation: fadeIn 0.3s ease-out ${i * 0.05}s both;"><strong>${a.waktu_mulai||'-'} - ${a.waktu_selesai||'-'}</strong> | ${a.kegiatan||'-'}<br><small class="text-muted">📍 ${a.tempat||'-'} | <b>👥 Petugas:</b> <b>${a.petugas||'-'}</b></small></div>`).join('') : '<p class="text-muted">Tidak ada agenda</p>';
 }
 
-function handleImportFile(e){ const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { try{ importData = JSON.parse(ev.target.result); document.getElementById('importPreview').style.display = 'block'; document.getElementById('importPreviewContent').innerHTML = `<p>✅ Siap impor: <b>${importData.length}</b> data</p>`; showToast('File siap. Klik Konfirmasi.','info'); } catch{ showToast('Format JSON salah','error'); } }; r.readAsText(f); }
+function handleImportFile(e){ 
+    const f = e.target.files[0]; if(!f) return; 
+    playSound('click');
+    const r = new FileReader(); 
+    r.onload = (ev) => { 
+        try{ 
+            importData = JSON.parse(ev.target.result); 
+            document.getElementById('importPreview').style.display = 'block'; 
+            document.getElementById('importPreviewContent').innerHTML = `<p>✅ Siap impor: <b>${importData.length}</b> data</p>`; 
+            showToast('File siap. Klik Konfirmasi.','info'); 
+        } catch{ 
+            playSound('error');
+            showToast('Format JSON salah','error'); 
+        } 
+    }; 
+    r.readAsText(f); 
+}
 
-async function confirmImport(){ if(!importData) return; const res = await api('importAgenda',{agendaData:importData}); if(res.status==='success'){ showToast(res.message,'success'); document.getElementById('importPreview').style.display='none'; importData=null; document.getElementById('importFile').value=''; loadAgenda(); } }
+async function confirmImport(){ 
+    if(!importData) return; 
+    playSound('click');
+    const res = await api('importAgenda',{agendaData:importData}); 
+    if(res.status === 'success'){ 
+        playSound('success');
+        showToast(res.message,'success'); 
+        document.getElementById('importPreview').style.display = 'none'; 
+        importData = null; 
+        document.getElementById('importFile').value = ''; 
+        loadAgenda(); 
+    } 
+}
 
 async function exportAgenda(fmt) {
+    playSound('click');
     const res = await api('exportAgenda', { username: currentUser.username, role: currentUser.role });
-    if (res.status !== 'success' || !res.data || res.data.length === 0) { showToast('Tidak ada data untuk diekspor.', 'warning'); return; }
+    if (res.status !== 'success' || !res.data || res.data.length === 0) { 
+        playSound('error');
+        showToast('Tidak ada data untuk diekspor.', 'warning'); 
+        return; 
+    }
     let content, type, ext;
     if (fmt === 'json') { content = JSON.stringify(res.data, null, 2); type = 'application/json'; ext = 'json'; } 
     else if (fmt === 'csv') {
@@ -497,6 +750,7 @@ async function exportAgenda(fmt) {
     // 🆕 FIXED: Nama file export menggunakan waktu lokal
     a.href = url; a.download = `agenda_${getLocalDateString()}.${ext}`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    playSound('success');
     showToast(`Export ${ext.toUpperCase()} berhasil`, 'success');
 }
 
@@ -504,6 +758,7 @@ async function exportAgenda(fmt) {
 // 🆕 FITUR CETAK LAPORAN - AMBIL DATA KESELURUHAN DARI DATABASE
 // ============================================
 window.toggleReportPeriod = function() {
+    playSound('click');
     const period = document.querySelector('input[name="reportPeriod"]:checked').value;
     const dailyInput = document.getElementById('dailyPeriodInput');
     const monthlyInput = document.getElementById('monthlyPeriodInput');
@@ -527,6 +782,7 @@ async function fetchAllAgendaFromDatabase() {
 }
 
 window.generateReport = async function() {
+    playSound('click');
     const period = document.querySelector('input[name="reportPeriod"]:checked').value;
     const evt = window.event;
     const btn = evt?.target?.closest('.btn');
@@ -535,7 +791,11 @@ window.generateReport = async function() {
     
     try {
         const allDatabaseAgenda = await fetchAllAgendaFromDatabase();
-        if (allDatabaseAgenda.length === 0) { showToast('Tidak ada data agenda di database.', 'warning'); return; }
+        if (allDatabaseAgenda.length === 0) { 
+            playSound('error');
+            showToast('Tidak ada data agenda di database.', 'warning'); 
+            return; 
+        }
         
         // 🆕 FIXED: Normalisasi status menggunakan waktu lokal
         const today = getLocalDateString();
@@ -545,25 +805,40 @@ window.generateReport = async function() {
         
         if (period === 'daily') {
             const dateInput = document.getElementById('reportDate').value;
-            if (!dateInput) { showToast('Pilih tanggal terlebih dahulu', 'warning'); return; }
+            if (!dateInput) { 
+                playSound('error');
+                showToast('Pilih tanggal terlebih dahulu', 'warning'); 
+                return; 
+            }
             filteredAgenda = allDatabaseAgenda.filter(a => a.tanggal === dateInput);
             const fullDate = new Date(dateInput + 'T00:00:00').toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             periodTitle = 'LAPORAN HARIAN'; periodSubtitle = `Hari/Tanggal: ${fullDate}`;
         } else if (period === 'monthly') {
             const monthInput = document.getElementById('reportMonth').value;
-            if (!monthInput) { showToast('Pilih bulan terlebih dahulu', 'warning'); return; }
+            if (!monthInput) { 
+                playSound('error');
+                showToast('Pilih bulan terlebih dahulu', 'warning'); 
+                return; 
+            }
             const [year, month] = monthInput.split('-');
             filteredAgenda = allDatabaseAgenda.filter(a => { if (!a.tanggal) return false; const parts = a.tanggal.split('-'); return parts[0] === year && parts[1] === month; });
             const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
             periodTitle = 'LAPORAN BULANAN'; periodSubtitle = `Bulan: ${monthNames[parseInt(month) - 1]} ${year}`;
         } else if (period === 'yearly') {
             const yearInput = document.getElementById('reportYear').value;
-            if (!yearInput) { showToast('Pilih tahun terlebih dahulu', 'warning'); return; }
+            if (!yearInput) { 
+                playSound('error');
+                showToast('Pilih tahun terlebih dahulu', 'warning'); 
+                return; 
+            }
             filteredAgenda = allDatabaseAgenda.filter(a => { if (!a.tanggal) return false; const parts = a.tanggal.split('-'); return parts[0] === yearInput; });
             periodTitle = 'LAPORAN TAHUNAN'; periodSubtitle = `Tahun: ${yearInput}`;
         }
         
-        if (filteredAgenda.length === 0) { showToast('Tidak ada agenda pada periode tersebut.', 'info'); return; }
+        if (filteredAgenda.length === 0) { 
+            showToast('Tidak ada agenda pada periode tersebut.', 'info'); 
+            return; 
+        }
         
         filteredAgenda.sort((a, b) => (a.tanggal || '').localeCompare(b.tanggal || '') || (a.waktu_mulai || '').localeCompare(b.waktu_mulai || ''));
         const groupedAgenda = {};
@@ -591,12 +866,15 @@ window.generateReport = async function() {
         if (printWindow) {
             printWindow.document.write(printContent); 
             printWindow.document.close();
+            playSound('success');
             showToast(`✅ Laporan ${periodTitle.toLowerCase()} berhasil dibuat (${totalAgenda} agenda)`, 'success');
         } else {
+            playSound('error');
             showToast('Gagal membuka jendela cetak. Periksa pengaturan pop-up browser Anda.', 'error');
         }
     } catch (err) {
         console.error('❌ Error generating report:', err);
+        playSound('error');
         showToast('Gagal membuat laporan: ' + err.message, 'error');
     } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = originalHTML || '<i class="fas fa-print"></i> Cetak / Export PDF'; }
@@ -604,6 +882,7 @@ window.generateReport = async function() {
 }
 
 window.generateDailyReport = function() {
+    playSound('click');
     const dailyRadio = document.querySelector('input[name="reportPeriod"][value="daily"]');
     if (dailyRadio) dailyRadio.checked = true;
     toggleReportPeriod();
@@ -611,8 +890,13 @@ window.generateDailyReport = function() {
 }
 
 function loadSettings(){ document.getElementById('waMode').value = localStorage.getItem('waMode') || 'contact'; document.getElementById('waNumbers').value = localStorage.getItem('waNumbers') || ''; document.getElementById('waNumberInput').style.display = document.getElementById('waMode').value === 'number' ? 'block' : 'none'; }
-function saveWaSettings(){ localStorage.setItem('waMode', document.getElementById('waMode').value); localStorage.setItem('waNumbers', document.getElementById('waNumbers').value); showToast('Pengaturan WhatsApp berhasil disimpan', 'success'); }
-function showToast(msg, type='info', duration=4000){ const t=document.getElementById('toast'); t.innerHTML = msg; t.className=`toast ${type} show`; setTimeout(()=>t.classList.remove('show'), duration); }
+function saveWaSettings(){ 
+    playSound('click');
+    localStorage.setItem('waMode', document.getElementById('waMode').value); 
+    localStorage.setItem('waNumbers', document.getElementById('waNumbers').value); 
+    playSound('success');
+    showToast('Pengaturan WhatsApp berhasil disimpan', 'success'); 
+}
 
 // 🆕 FIXED: Jam dashboard eksplisit menggunakan zona waktu Asia/Jakarta (WIB)
 function updateClock(){
@@ -638,7 +922,31 @@ function formatDate(ds){
     return String(ds);
 }
 
-window.navigateTo = window.navigateTo || navigateTo; window.sendWhatsAppDirect = window.sendWhatsAppDirect || sendWhatsAppDirect; window.sendWhatsAppById = window.sendWhatsAppById || sendWhatsAppById; window.sendWhatsApp = window.sendWhatsApp || sendWhatsAppDirect; window.sendDailyAgenda = window.sendDailyAgenda || sendDailyAgenda; window.sendSelectedAgendas = window.sendSelectedAgendas || sendSelectedAgendas; window.editAgenda = window.editAgenda || editAgenda; window.deleteAgenda = window.deleteAgenda || deleteAgenda; window.openAgendaModal = window.openAgendaModal || openAgendaModal; window.closeAgendaModal = window.closeAgendaModal || closeAgendaModal; window.loadAgenda = window.loadAgenda || loadAgenda; window.changeMonth = window.changeMonth || changeMonth; window.openUserModal = window.openUserModal || openUserModal; window.closeUserModal = window.closeUserModal || closeUserModal; window.editUser = window.editUser || editUser; window.deleteUser = window.deleteUser || deleteUser; window.forceLogoutUser = window.forceLogoutUser || forceLogoutUser; window.allowLoginUser = window.allowLoginUser || allowLoginUser; window.confirmImport = window.confirmImport || confirmImport; window.exportAgenda = window.exportAgenda || exportAgenda; window.saveWaSettings = window.saveWaSettings || saveWaSettings; window.generateDailyReport = window.generateDailyReport || generateDailyReport; window.toggleReportPeriod = window.toggleReportPeriod || toggleReportPeriod; window.generateReport = window.generateReport || generateReport; window.resetFilter = window.resetFilter || resetFilter;
+window.navigateTo = window.navigateTo || navigateTo; 
+window.sendWhatsAppDirect = window.sendWhatsAppDirect || sendWhatsAppDirect; 
+window.sendWhatsAppById = window.sendWhatsAppById || sendWhatsAppById; 
+window.sendWhatsApp = window.sendWhatsApp || sendWhatsAppDirect; 
+window.sendDailyAgenda = window.sendDailyAgenda || sendDailyAgenda; 
+window.sendSelectedAgendas = window.sendSelectedAgendas || sendSelectedAgendas; 
+window.editAgenda = window.editAgenda || editAgenda; 
+window.deleteAgenda = window.deleteAgenda || deleteAgenda; 
+window.openAgendaModal = window.openAgendaModal || openAgendaModal; 
+window.closeAgendaModal = window.closeAgendaModal || closeAgendaModal; 
+window.loadAgenda = window.loadAgenda || loadAgenda; 
+window.changeMonth = window.changeMonth || changeMonth; 
+window.openUserModal = window.openUserModal || openUserModal; 
+window.closeUserModal = window.closeUserModal || closeUserModal; 
+window.editUser = window.editUser || editUser; 
+window.deleteUser = window.deleteUser || deleteUser; 
+window.forceLogoutUser = window.forceLogoutUser || forceLogoutUser; 
+window.allowLoginUser = window.allowLoginUser || allowLoginUser; 
+window.confirmImport = window.confirmImport || confirmImport; 
+window.exportAgenda = window.exportAgenda || exportAgenda; 
+window.saveWaSettings = window.saveWaSettings || saveWaSettings; 
+window.generateDailyReport = window.generateDailyReport || generateDailyReport; 
+window.toggleReportPeriod = window.toggleReportPeriod || toggleReportPeriod; 
+window.generateReport = window.generateReport || generateReport; 
+window.resetFilter = window.resetFilter || resetFilter;
 
 function getPetugasValue() {
     const checked = Array.from(document.querySelectorAll('.petugas-check:checked')).map(cb => cb.value);
