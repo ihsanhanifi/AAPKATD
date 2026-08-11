@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="theme-color" content="#1a5632">
+    <meta name="theme-color" content="#1e40af">
     <link rel="icon" href="LogoAP.jpeg" type="image/jpeg">
     <title>Agenda Pimpinan - Kementerian Agama Kab. Tanah Datar</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- ============================================ -->
+    <!-- 🔔 CONTAINER NOTIFIKASI MODERN -->
+    <!-- ============================================ -->
+    <div id="notification-container"></div>
+
     <!-- ============================================ -->
     <!-- 🔐 LOGIN PAGE -->
     <!-- ============================================ -->
@@ -306,13 +311,14 @@
             <!-- FOOTER -->
             <footer class="app-footer">
                 <div class="app-footer-content">
+                    <!-- Diperbaiki: Strong untuk Nama (ikon 💻), footer-role untuk Jabatan (ikon 👨‍💼) -->
                     <strong>Ihsan Putra Hanifi, S.Kom</strong>
                     <span class="footer-divider"></span>
                     <span class="footer-role">Pranata Komputer Ahli Pertama</span>
                     <span class="footer-divider"></span>
                     <div class="footer-links">
-                        <a href="#" onclick="showToast('Agenda Pimpinan v2.0', 'info'); return false;"><i class="fas fa-info-circle"></i> v2.0</a>
-                        <a href="#" onclick="showToast('Kemenag Kab. Tanah Datar', 'info'); return false;"><i class="fas fa-building"></i> Kemenag</a>
+                        <a href="#" onclick="showNotification('Info', 'Aplikasi Agenda Pimpinan v2.0', 'info'); return false;"><i class="fas fa-info-circle"></i> v2.0</a>
+                        <a href="#" onclick="showNotification('Info', 'Kementerian Agama Kab. Tanah Datar', 'info'); return false;"><i class="fas fa-building"></i> Kemenag</a>
                     </div>
                     <span class="footer-copyright">2026 Kementerian Agama Kabupaten Tanah Datar</span>
                 </div>
@@ -320,7 +326,9 @@
         </main>
     </div>
 
-    <!-- MODAL: AGENDA -->
+    <!-- ============================================ -->
+    <!-- 🪟 MODAL: AGENDA -->
+    <!-- ============================================ -->
     <div class="modal" id="agendaModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -373,7 +381,9 @@
         </div>
     </div>
 
-    <!-- MODAL: USER -->
+    <!-- ============================================ -->
+    <!-- 🪟 MODAL: USER -->
+    <!-- ============================================ -->
     <div class="modal" id="userModal">
         <div class="modal-content">
             <div class="modal-header">
