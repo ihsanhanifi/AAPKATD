@@ -58,6 +58,21 @@ function playSound(type) {
 }
 
 // ============================================
+// 🗣️ FITUR SUARA SAMBUTAN (TEXT-TO-SPEECH)
+// ============================================
+function speakWelcome(message) {
+    if ('speechSynthesis' in window) {
+        // Batalkan suara sebelumnya agar tidak tumpang tindih
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(message);
+        utterance.lang = 'id-ID'; // Bahasa Indonesia
+        utterance.rate = 0.9;     // Kecepatan sedikit lebih lambat agar jelas dan berwibawa
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+// ============================================
 // 🔔 FITUR NOTIFIKASI MODERN (ALERT MODAL)
 // ============================================
 function showNotification(title, message, type = 'info', duration = 4000) {
@@ -197,6 +212,10 @@ async function handleLogin(e) {
     if (res.status === 'success') { 
         currentUser = res.data; 
         sessionStorage.setItem('agendaUser', JSON.stringify(currentUser)); 
+        
+        // 🆕 PUTAR SUARA SAMBUTAN
+        speakWelcome("Selamat Datang di Aplikasi Agenda Pimpinan Kantor Kementerian Agama Kabupaten Tanah Datar");
+        
         showNotification('Login Berhasil', `Selamat datang, ${currentUser.nama_lengkap}!`, 'success');
         showApp(); 
     } else {
@@ -209,6 +228,11 @@ async function handleLogin(e) {
 function handleLogout() { 
     playSound('click');
     showNotification('Logout', 'Anda telah berhasil keluar dari sistem.', 'info', 2000);
+    
+    // 🆕 PUTAR SUARA TERIMA KASIH
+    speakWelcome("Terima Kasih sudah Menggunakan Aplikasi Agenda Pimpinan Kantor Kementerian Agama Kabupaten Tanah Datar");
+    
+    // Delay 1.5 detik agar suara sempat terdengar sebelum halaman berubah
     setTimeout(() => {
         clearTimeout(idleTimer); 
         sessionStorage.removeItem('agendaUser'); 
@@ -216,7 +240,7 @@ function handleLogout() {
         document.getElementById('loginPage').style.display = 'flex'; 
         document.getElementById('appPage').style.display = 'none'; 
         document.getElementById('loginForm')?.reset(); 
-    }, 1000);
+    }, 1500);
 }
 
 function showApp() {
@@ -755,7 +779,7 @@ async function exportAgenda(fmt) {
 }
 
 // ============================================
-// 🆕 FITUR CETAK LAPORAN - AMBIL DATA KESELURUHAN DARI DATABASE
+// 🆕 FITUR CETAK LAPORAN PROFESIONAL (HARIAN/BULANAN/TAHUNAN)
 // ============================================
 window.toggleReportPeriod = function() {
     playSound('click');
@@ -860,7 +884,71 @@ window.generateReport = async function() {
         const totalAgenda = filteredAgenda.length;
         const uniqueDates = Object.keys(groupedAgenda).length;
         
-        const printContent = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>${periodTitle} - ${periodSubtitle}</title><style>@page { size: A4 landscape; margin: 1.5cm; }body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #111; line-height: 1.4; padding: 0; margin: 0; background: #fff; }.container { max-width: 100%; margin: 0 auto; }.header { text-align: center; margin-bottom: 25px; border-bottom: 3px double #1e40af; padding-bottom: 15px; }.header h1 { margin: 0; color: #1e40af; font-size: 22px; text-transform: uppercase; font-weight: 700; }.header h2 { margin: 8px 0 0; color: #333; font-size: 18px; font-weight: 600; }.header p { margin: 5px 0 0; color: #555; font-size: 14px; }.stats { display: flex; justify-content: space-around; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }.stat-item { text-align: center; }.stat-item .stat-number { font-size: 24px; font-weight: 700; color: #1e40af; }.stat-item .stat-label { font-size: 12px; color: #666; margin-top: 5px; }table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }th { background-color: #1e40af; color: #fff; padding: 10px 8px; text-align: center; border: 1px solid #1e40af; font-weight: 600; }td { border: 1px solid #ccc; padding: 8px; vertical-align: top; }tr:nth-child(even) { background-color: #eff6ff; }.footer { margin-top: 30px; text-align: right; font-size: 12px; color: #444; padding-top: 15px; border-top: 1px solid #ddd; }.no-print { text-align: center; margin-top: 40px; padding: 20px; background: #e9ecef; border-radius: 8px; }.btn-print { padding: 12px 25px; background: #1e40af; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; margin: 0 5px; }.btn-print:hover { background: #1e3a8a; }@media print { body { padding: 0; } .no-print { display: none !important; } }</style></head><body><div class="container"><div class="header"><h1>Kementerian Agama Kabupaten Tanah Datar</h1><h2>${periodTitle}</h2><p>${periodSubtitle}</p></div><div class="stats"><div class="stat-item"><div class="stat-number">${totalAgenda}</div><div class="stat-label">Total Agenda</div></div><div class="stat-item"><div class="stat-number">${uniqueDates}</div><div class="stat-label">${period === 'daily' ? 'Hari' : 'Tanggal'}</div></div></div><table><thead><tr><th style="width: 5%;">No</th><th style="width: 12%;">Waktu</th><th style="width: 25%;">Nama Kegiatan</th><th style="width: 15%;">Tempat</th><th style="width: 12%;">Penanggung Jawab</th><th style="width: 12%;">Petugas</th><th style="width: 10%;">Pejabat</th><th style="width: 9%;">Ket & Pakaian</th></tr></thead><tbody>${tableRows}</tbody></table><div class="footer"><p><strong>Dicetak oleh:</strong> ${currentUser ? currentUser.nama_lengkap : 'Admin'}</p><p><strong>Waktu Cetak:</strong> ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</p></div></div><div class="no-print"><button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button><button class="btn-print" onclick="window.close()" style="background: #64748b;">✕ Tutup</button></div></body></html>`;
+        // 🆕 FIXED: Template cetak profesional dengan Logo Kemenag
+        const printContent = `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>${periodTitle} - ${periodSubtitle}</title>
+    <style>
+        @page { size: A4 landscape; margin: 1.5cm; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #111; line-height: 1.4; padding: 0; margin: 0; background: #fff; }
+        .container { max-width: 100%; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 25px; border-bottom: 3px double #1e40af; padding-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 20px; }
+        .header img { width: 80px; height: 80px; object-fit: contain; }
+        .header-text { text-align: left; }
+        .header h1 { margin: 0; color: #1e40af; font-size: 22px; text-transform: uppercase; font-weight: 700; }
+        .header h2 { margin: 5px 0 0; color: #333; font-size: 18px; font-weight: 600; }
+        .header p { margin: 5px 0 0; color: #555; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+        th { background-color: #1e40af; color: #fff; padding: 10px 8px; text-align: center; border: 1px solid #1e40af; font-weight: 600; }
+        td { border: 1px solid #ccc; padding: 8px; vertical-align: top; }
+        tr:nth-child(even) { background-color: #eff6ff; }
+        .footer { margin-top: 30px; text-align: right; font-size: 12px; color: #444; padding-top: 15px; border-top: 1px solid #ddd; }
+        .no-print { text-align: center; margin-top: 40px; padding: 20px; background: #e9ecef; border-radius: 8px; }
+        .btn-print { padding: 12px 25px; background: #1e40af; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; margin: 0 5px; }
+        .btn-print:hover { background: #1e3a8a; }
+        @media print { body { padding: 0; } .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="kemenag.png" alt="Logo Kemenag">
+            <div class="header-text">
+                <h1>Kementerian Agama Kabupaten Tanah Datar</h1>
+                <h2>${periodTitle}</h2>
+                <p>${periodSubtitle}</p>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%;">No</th>
+                    <th style="width: 12%;">Waktu</th>
+                    <th style="width: 25%;">Nama Kegiatan</th>
+                    <th style="width: 15%;">Tempat</th>
+                    <th style="width: 12%;">Penanggung Jawab</th>
+                    <th style="width: 12%;">Petugas</th>
+                    <th style="width: 10%;">Pejabat</th>
+                    <th style="width: 9%;">Ket & Pakaian</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+        <div class="footer">
+            <p><strong>Dicetak oleh:</strong> ${currentUser ? currentUser.nama_lengkap : 'Admin'}</p>
+            <p><strong>Waktu Cetak:</strong> ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</p>
+        </div>
+    </div>
+    <div class="no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
+        <button class="btn-print" onclick="window.close()" style="background: #64748b;">✕ Tutup</button>
+    </div>
+</body>
+</html>`;
         
         const printWindow = window.open('', '_blank'); 
         if (printWindow) {
