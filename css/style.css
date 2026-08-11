@@ -1,9 +1,9 @@
 /* ============================================ */
-/* 🎨 MODERN BLUE ELEGANT AESTHETIC */
+/* 🎨 MODERN BLUE ELEGANT AESTHETIC & GLASSMORPHISM */
 /* ============================================ */
 
 :root {
-    /* 🆕 Palet Warna Biru Modern Elegan */
+    /* Palet Warna Biru Modern Elegan */
     --primary: #1e40af;
     --primary-dark: #1e3a8a;
     --primary-light: #3b82f6;
@@ -43,7 +43,7 @@
     --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     
-    /* Glassmorphism */
+    /* Glassmorphism Variables */
     --glass-bg: rgba(255, 255, 255, 0.75);
     --glass-bg-dark: rgba(30, 58, 138, 0.88);
     --glass-border: rgba(255, 255, 255, 0.6);
@@ -71,6 +71,8 @@
 @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes gradientMesh { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(30px, -50px) scale(1.1); } 66% { transform: translate(-20px, 20px) scale(0.9); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeOut { to { opacity: 0; transform: translateX(100px); } }
 
 /* ============================================ */
 /* 🌐 GLOBAL STYLES & BACKGROUND INSTANSI */
@@ -117,6 +119,53 @@ body::before {
 
 img, svg, video, iframe { max-width: 100%; height: auto; display: block; }
 ::selection { background: var(--primary); color: var(--white); }
+
+/* ============================================ */
+/* 🔔 NOTIFIKASI MODERN (ALERT MODAL) */
+/* ============================================ */
+#notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+.custom-alert {
+    pointer-events: auto;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    min-width: 320px;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.custom-alert.success { border-left-color: var(--success); }
+.custom-alert.error { border-left-color: var(--danger); }
+.custom-alert.warning { border-left-color: var(--warning); }
+
+.custom-alert-icon { font-size: 1.25rem; margin-top: 2px; }
+.custom-alert.success .custom-alert-icon { color: var(--success); }
+.custom-alert.error .custom-alert-icon { color: var(--danger); }
+.custom-alert.warning .custom-alert-icon { color: var(--warning); }
+
+.custom-alert-content h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; color: var(--dark); }
+.custom-alert-content p { font-size: 0.85rem; color: var(--gray); line-height: 1.4; }
+.custom-alert-close {
+    margin-left: auto; background: none; border: none; color: var(--gray-light);
+    cursor: pointer; font-size: 1.1rem; transition: var(--transition);
+}
+.custom-alert-close:hover { color: var(--dark); }
 
 /* ============================================ */
 /* 🔐 LOGIN PAGE (GLASSMORPHISM) */
